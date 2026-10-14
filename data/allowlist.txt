@@ -1,0 +1,2 @@
+# One Android package id per line or comma-separated.
+# IDs here are always published to app_ids.txt.

@@ -1,0 +1,174 @@
+# Aliases: maps variations to canonical app names.
+# Format: canonical_name -> { category, aliases: [list of variations] }
+#
+# Add new apps and aliases here as you discover them in source articles.
+# Matching is case-insensitive and ignores extra whitespace.
+
+apps:
+  Ozon:
+    category: marketplace
+    aliases:
+      - ozon
+      - озон
+      - "ozon.ru"
+
+  Wildberries:
+    category: marketplace
+    aliases:
+      - wildberries
+      - вайлдберриз
+      - вб
+      - wb
+
+  Яндекс Маркет:
+    category: marketplace
+    aliases:
+      - яндекс маркет
+      - яндекс.маркет
+      - yandex market
+      - market.yandex
+
+  МегаМаркет:
+    category: marketplace
+    aliases:
+      - мегамаркет
+      - megamarket
+      - сбермегамаркет
+
+  Кинопоиск:
+    category: streaming
+    aliases:
+      - кинопоиск
+      - kinopoisk
+      - "кинопоиск hd"
+
+  Яндекс Пэй:
+    category: payments
+    aliases:
+      - яндекс пэй
+      - яндекс.пэй
+      - yandex pay
+      - yandexpay
+
+  Яндекс Погода:
+    category: yandex_services
+    aliases:
+      - яндекс погода
+      - яндекс.погода
+      - yandex weather
+
+  Яндекс Карты:
+    category: yandex_services
+    aliases:
+      - яндекс карты
+      - яндекс.карты
+      - yandex maps
+
+  Яндекс Go:
+    category: yandex_services
+    aliases:
+      - яндекс go
+      - яндекс гоу
+      - yandex go
+
+  VK:
+    category: social
+    aliases:
+      - vk
+      - вконтакте
+      - вк
+      - "vk.com"
+
+  Одноклассники:
+    category: social
+    aliases:
+      - одноклассники
+      - ok.ru
+      - одноклассники.ру
+
+  Mail.ru:
+    category: mail
+    aliases:
+      - mail.ru
+      - "почта mail"
+      - "mail почта"
+
+  Авито:
+    category: marketplace
+    aliases:
+      - авито
+      - avito
+
+  Самокат:
+    category: delivery
+    aliases:
+      - самокат
+      - samokat
+
+  Пятёрочка:
+    category: retail
+    aliases:
+      - пятёрочка
+      - пятерочка
+      - "x5 пятерочка"
+
+  Перекрёсток:
+    category: retail
+    aliases:
+      - перекрёсток
+      - перекресток
+
+  Детский мир:
+    category: retail
+    aliases:
+      - детский мир
+      - "детский-мир"
+
+  DNS:
+    category: retail
+    aliases:
+      - dns
+      - "dns shop"
+      - "днс"
+
+  Золотое яблоко:
+    category: retail
+    aliases:
+      - золотое яблоко
+      - goldapple
+
+  Авиасейлс:
+    category: travel
+    aliases:
+      - авиасейлс
+      - aviasales
+
+  РЖД:
+    category: travel
+    aliases:
+      - ржд
+      - "ржд пассажирам"
+      - rzd
+
+  2ГИС:
+    category: maps
+    aliases:
+      - 2гис
+      - 2gis
+      - "2гис карты"
+
+  HeadHunter:
+    category: jobs
+    aliases:
+      - headhunter
+      - hh
+      - "hh.ru"
+
+  Госуслуги:
+    category: government
+    aliases:
+      - госуслуги
+      - gosuslugi
+
+# Default category for unknown apps (used when an app is detected but not in aliases yet)
+default_category: other

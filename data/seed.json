@@ -1,0 +1,309 @@
+{
+  "apps": [
+    {
+      "package_id": "com.avito.android",
+      "names": [
+        "Авито"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "rozetked.me"
+      ],
+      "evidence_count": 3
+    },
+    {
+      "package_id": "com.vkontakte.android",
+      "names": [
+        "VK"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "com.wildberries.ru",
+      "names": [
+        "Wildberries"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "com.yandex.bank",
+      "names": [
+        "Яндекс Пэй"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "goldapple.ru.goldapple.customers",
+      "names": [
+        "Золотое яблоко"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "meduza.io"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "package_id": "ru.aviasales",
+      "names": [
+        "Авиасейлс"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 2
+    },
+    {
+      "package_id": "ru.detmir.dmbonus",
+      "names": [
+        "Детский мир"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 3
+    },
+    {
+      "package_id": "ru.dns.shop.android",
+      "names": [
+        "DNS"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "meduza.io"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "package_id": "ru.dublgis.dgismobile",
+      "names": [
+        "2ГИС"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.hh.android",
+      "names": [
+        "HeadHunter"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 3
+    },
+    {
+      "package_id": "ru.kinopoisk",
+      "names": [
+        "Кинопоиск"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.mail.mailapp",
+      "names": [
+        "Mail.ru"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "package_id": "ru.megamarket.marketplace",
+      "names": [
+        "МегаМаркет"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "rozetked.me"
+      ],
+      "evidence_count": 2
+    },
+    {
+      "package_id": "ru.ok.android",
+      "names": [
+        "Одноклассники"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "rozetked.me"
+      ],
+      "evidence_count": 2
+    },
+    {
+      "package_id": "ru.ozon.app.android",
+      "names": [
+        "Ozon"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.pyaterochka.app.browser",
+      "names": [
+        "Пятёрочка"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "kod.ru",
+        "meduza.io"
+      ],
+      "evidence_count": 2
+    },
+    {
+      "package_id": "ru.rostel",
+      "names": [
+        "Госуслуги"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.rzd.pass",
+      "names": [
+        "РЖД"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.sbcs.store",
+      "names": [
+        "Самокат"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.yandex.taxi",
+      "names": [
+        "Яндекс Go"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "meduza.io"
+      ],
+      "evidence_count": 1
+    },
+    {
+      "package_id": "ru.yandex.weatherplugin",
+      "names": [
+        "Яндекс Погода"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "kod.ru",
+        "meduza.io",
+        "rozetked.me"
+      ],
+      "evidence_count": 4
+    },
+    {
+      "package_id": "ru.yandex.yandexmaps",
+      "names": [
+        "Яндекс Карты"
+      ],
+      "first_seen": "2026-05-18",
+      "last_seen": "2026-10-14",
+      "source_domains": [
+        "hi-tech.mail.ru",
+        "rozetked.me"
+      ],
+      "evidence_count": 2
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+# Dynamic discovery configuration. No source points to one hard-coded article.
+# Every enabled domain is searched daily for fresh mentions.
+search:
+  max_results_per_query: 10
+
+phrases:
+  - '"отключите VPN"'
+  - '"отключить VPN"'
+  - '"выключите VPN"'
+  - '"обнаружен VPN"'
+  - '"обнаруживает VPN"'
+  - '"не работает с VPN"'
+  - '"VPN или прокси"'
+  - '"disable VPN"'
+  - '"turn off VPN"'
+
+# 15 sources instead of the original four static article URLs.
+source_domains:
+  - {id: hitech_mail, name: "Hi-Tech Mail", domain: "hi-tech.mail.ru", enabled: true}
+  - {id: rozetked, name: "Rozetked", domain: "rozetked.me", enabled: true}
+  - {id: kod_durova, name: "Код Дурова", domain: "kod.ru", enabled: true}
+  - {id: meduza, name: "Meduza", domain: "meduza.io", enabled: true}
+  - {id: rbc, name: "РБК", domain: "rbc.ru", enabled: true}
+  - {id: fontanka, name: "Фонтанка", domain: "fontanka.ru", enabled: true}
+  - {id: fourpda, name: "4PDA", domain: "4pda.to", enabled: true}
+  - {id: habr, name: "Habr", domain: "habr.com", enabled: true}
+  - {id: vc, name: "vc.ru", domain: "vc.ru", enabled: true}
+  - {id: pikabu, name: "Пикабу", domain: "pikabu.ru", enabled: true}
+  - {id: ixbt, name: "iXBT", domain: "ixbt.com", enabled: true}
+  - {id: cnews, name: "CNews", domain: "cnews.ru", enabled: true}
+  - {id: adguard, name: "AdGuard Blog", domain: "adguard.com", enabled: true}
+  - {id: ntc, name: "NTC / RKN Quest", domain: "ntc.rkn.quest", enabled: true}
+  - {id: tass, name: "ТАСС", domain: "tass.ru", enabled: true}
+
+stores:
+  - id: google_play
+    name: "Google Play"
+    domains: ["play.google.com"]
+    enabled: true
+  - id: rustore
+    name: "RuStore"
+    domains: ["rustore.ru"]
+    enabled: true
+  - id: samsung_galaxy_store
+    name: "Samsung Galaxy Store"
+    domains: ["galaxystore.samsung.com"]
+    enabled: true
+  - id: huawei_appgallery
+    name: "Huawei AppGallery"
+    domains: ["appgallery.huawei.com", "appgallery.cloud.huawei.com"]
+    enabled: true
