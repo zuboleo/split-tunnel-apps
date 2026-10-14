@@ -51,7 +51,6 @@ jobs:
         run: pytest -q
 
       - name: Update application list
-        if: github.event_name != 'pull_request'
         run: python -m scraper.main
 
       - name: Commit updates
