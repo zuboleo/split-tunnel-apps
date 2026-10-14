@@ -15,11 +15,29 @@ def test_generic_vpn_mention_is_not_enough() -> None:
     assert c.verdict == "neutral"
 
 
+def test_vpn_as_blocking_bypass_is_not_app_blocking() -> None:
+    c = analyze_text("VPN — это средство обхода блокировок и защиты соединения")
+    assert c.verdict == "neutral"
+    assert not c.relevant
+
+
 def test_without_vpn_is_counterevidence() -> None:
     c = analyze_text("Приложение не работает без VPN, а с VPN открывается нормально")
     assert not c.relevant
     assert c.verdict == "negative"
     assert c.confidence >= 0.9
+
+
+def test_without_vpn_prefix_is_counterevidence() -> None:
+    c = analyze_text("Без впн не зайдёшь, пишет ошибка подключения")
+    assert c.verdict == "negative"
+    assert "requires_vpn_ru" in c.negative_matches
+
+
+def test_make_it_work_without_vpn_is_counterevidence() -> None:
+    c = analyze_text("Сделайте приложение чтобы работало без VPN, а то без него не работает")
+    assert c.verdict == "negative"
+    assert not c.relevant
 
 
 def test_same_failure_with_and_without_vpn_is_counterevidence() -> None:
@@ -49,11 +67,24 @@ def test_preposition_must_be_a_word_not_a_letter_inside_word() -> None:
     assert c.verdict == "negative"
 
 
+def test_vpn_does_not_fix_failure_is_negative() -> None:
+    c = analyze_text("Без вайфая не открывается вообще, да и с впн тоже через раз")
+    assert c.verdict == "negative"
+    assert "vpn_does_not_fix_ru" in c.negative_matches
+
+
 def test_with_vpn_failure_is_positive() -> None:
     c = analyze_text("Приложение не работает с VPN")
     assert c.relevant
     assert c.verdict == "positive"
     assert "blocked_with_vpn_ru" in c.strong_matches
+
+
+def test_colloquial_vpn_allergy_is_positive() -> None:
+    c = analyze_text('У вашего приложения "аллергия" на VPN? Тогда больше 1 звезды не получите.')
+    assert c.verdict == "positive"
+    assert c.confidence >= 0.9
+    assert "vpn_allergy_ru" in c.strong_matches
 
 
 def test_false_vpn_detection_is_very_strong() -> None:
