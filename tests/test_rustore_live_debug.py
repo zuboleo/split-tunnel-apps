@@ -1,3 +1,4 @@
+import json
 import re
 
 import requests
@@ -13,60 +14,54 @@ def test_debug_rustore_delivery():
     review_url = f"https://www.rustore.ru/catalog/app/{package}/reviews"
     page = session.get(review_url, timeout=20).text
 
-    script_urls = []
-    for src in re.findall(r'<script[^>]+src=["\']([^"\']+)', page, flags=re.I):
-        if src.startswith("/"):
-            src = "https://www.rustore.ru" + src
-        if src.startswith("http"):
-            script_urls.append(src)
+    review_chunk = re.search(
+        r'href=["\'](/catalog/_next/static/chunks/reviewsView\.[^"\']+\.js)["\']',
+        page,
+        flags=re.I,
+    )
+    assert review_chunk, "reviewsView chunk not found"
+    chunk_url = "https://www.rustore.ru" + review_chunk.group(1)
+    text = session.get(chunk_url, timeout=20).text
+    print("\nCHUNK", chunk_url, "LEN", len(text))
 
-    chunk_ids = (6214, 883, 8331, 9874, 6290, 5125, 73918)
-    print("\n=== PAGE REFERENCES ===")
-    for cid in chunk_ids:
-        for m in re.finditer(str(cid), page):
-            print("PAGE_ID", cid, page[max(0, m.start()-300):m.end()+500])
-            break
+    print("\n=== API STRING LITERALS ===")
+    strings = sorted(set(re.findall(r'["\']([^"\']{1,500})["\']', text)))
+    for value in strings:
+        low = value.lower()
+        if any(token in low for token in ("feedback", "review", "showcase", "comment", "rating")):
+            print("STR", value)
 
-    print("\n=== SCRIPT REFERENCES ===")
-    loaded = {}
-    for src in script_urls:
-        text = session.get(src, timeout=20).text
-        loaded[src] = text
-        hits = [cid for cid in chunk_ids if str(cid) in text]
-        if hits:
-            print("SRC", src, "IDS", hits)
-            for cid in hits:
-                m = re.search(str(cid), text)
-                if m:
-                    print("CTX", cid, text[max(0, m.start()-500):m.end()+1000])
-
-    print("\n=== CHUNK FILENAMES FROM HTML/RUNTIME ===")
-    all_text = page + "\n" + "\n".join(loaded.values())
-    for cid in chunk_ids:
-        # Next/webpack forms seen in runtime: 6214:"hash" or {6214:"hash"}
-        pats = [
-            rf'{cid}["\']?\s*:\s*["\']([^"\']+)["\']',
-            rf'["\']{cid}["\']\s*:\s*["\']([^"\']+)["\']',
-            rf'{cid}[^\n]{{0,120}}?([0-9a-f]{{8,}})\.js',
-        ]
-        for pat in pats:
-            matches = re.findall(pat, all_text)
-            if matches:
-                print("MAP", cid, matches[:20])
-
-    print("\n=== ALL STATIC CHUNK URLS IN PAGE ===")
-    urls = sorted(set(re.findall(r'(/catalog/_next/static/chunks/[^"\']+?\.js)', page)))
-    for url in urls:
-        print("STATIC", "https://www.rustore.ru" + url)
-
-    # Runtime often contains a function that maps numeric chunk ids to hashed filenames.
-    print("\n=== WEBPACK MAPPER ===")
-    for src, text in loaded.items():
-        if "webpack-" not in src:
-            continue
-        for cid in chunk_ids:
-            for m in re.finditer(str(cid), text):
-                print("WEBPACK", cid, text[max(0, m.start()-1200):m.end()+1600])
+    print("\n=== FEEDBACK CONTEXT ===")
+    for pattern in (
+        r"/v1/showcase/web/feedbacks",
+        r"WEB_GATEWAY_URL",
+        r"packageName",
+        r"continuation",
+        r"sortBy",
+        r"comments",
+    ):
+        print("PATTERN", pattern)
+        for idx, match in enumerate(re.finditer(pattern, text, flags=re.I)):
+            print("CTX", text[max(0, match.start()-1000):match.end()+1800])
+            if idx >= 15:
                 break
+
+    # Extract likely relative HTTP endpoints from the minified chunk.
+    print("\n=== LIKELY ENDPOINTS ===")
+    endpoints = sorted(set(re.findall(r'["\'](/v\d+/[^"\']+)["\']', text)))
+    for endpoint in endpoints:
+        print("ENDPOINT", endpoint)
+
+    # The page itself exposes runtime env config; print any gateway URL values.
+    print("\n=== PAGE GATEWAY VALUES ===")
+    for m in re.finditer(r'(?:WEB_GATEWAY_URL|SERVER_WEB_GATEWAY_URL)', page):
+        print("PAGE_GATEWAY", page[max(0, m.start()-500):m.end()+800])
+
+    # Print structured data top-level app identity to correlate any API IDs.
+    print("\n=== PAGE IDS ===")
+    for key in ("packageName", "appId", "appIdInt", "publicId", "developerId"):
+        values = sorted(set(re.findall(rf'["\']{key}["\']\s*:\s*["\']?([^,}}"\']+)', page)))
+        if values:
+            print("ID", key, values[:20])
 
     assert False, "intentional debug failure"
