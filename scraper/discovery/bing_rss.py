@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from email.utils import parsedate_to_datetime
+from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
@@ -18,15 +19,47 @@ class BingRssSearch:
         self.session = session
         self.delay = PoliteDelay(delay_seconds)
 
+    def _request_rss(self, endpoint: str, params: dict[str, str]) -> requests.Response:
+        # requests used to follow Bing geo redirects automatically. Some of
+        # Bing's generated hosts (www.ru.bing.com, www.fi.bing.com, etc.) have
+        # recently presented certificates for a different hostname, which made
+        # otherwise valid searches disappear from the daily run. Follow Bing
+        # redirects manually and pin them back to canonical www.bing.com.
+        response = self.session.get(endpoint, params=params, timeout=20, allow_redirects=False)
+        for _ in range(2):
+            if response.status_code not in {301, 302, 303, 307, 308}:
+                break
+            location = response.headers.get("Location")
+            if not location:
+                break
+            target = urljoin(response.url, location)
+            parsed = urlparse(target)
+            host = (parsed.hostname or "").lower()
+            if host.endswith(".bing.com") and host != "www.bing.com":
+                parsed = parsed._replace(netloc="www.bing.com")
+                target = parsed.geturl()
+            response = self.session.get(target, timeout=20, allow_redirects=False)
+
+        if response.status_code in {301, 302, 303, 307, 308}:
+            # Last-resort canonical request with an explicit country instead of
+            # following another geo host.
+            fallback = dict(params)
+            fallback["cc"] = "ru"
+            fallback["mkt"] = "en-US"
+            response = self.session.get(endpoint, params=fallback, timeout=20, allow_redirects=False)
+
+        response.raise_for_status()
+        if response.status_code in {301, 302, 303, 307, 308}:
+            raise RuntimeError(f"Bing RSS redirect loop: {response.status_code} {response.headers.get('Location')}")
+        return response
+
     def search(self, query: str, limit: int = 10, news: bool = False) -> list[SearchHit]:
         self.delay.wait()
         endpoint = "https://www.bing.com/news/search" if news else "https://www.bing.com/search"
-        response = self.session.get(
+        response = self._request_rss(
             endpoint,
-            params={"q": query, "format": "rss", "mkt": "ru-RU", "setlang": "ru-RU"},
-            timeout=20,
+            {"q": query, "format": "rss", "mkt": "ru-RU", "setlang": "ru-RU"},
         )
-        response.raise_for_status()
         return self.parse_rss(response.text, query=query, limit=limit)
 
     @classmethod
