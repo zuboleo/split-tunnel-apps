@@ -915,5 +915,100 @@
     "store": "google_play",
     "query": "deep_review_recheck",
     "fingerprint": "abf56d04fb82230954ed539c2695873ae337265fc10e3dd80fb2996c4721eb85"
+  },
+  {
+    "package_id": "creditapp.onlinecard.miczaim",
+    "app_name": "Банк Онлайн: Т кредит и карты",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=creditapp.onlinecard.miczaim",
+    "title": "Банк Онлайн: Т кредит и карты",
+    "snippet": "убогое приложение или банк. на мобильном интернете не работает, с впн не работает, пользоваться не возможно. хотя на этом же впн работают и госуслуги, и макс, и телеграмм, и зеленный банк на \"с\", красный на \"а\", и синие на \"в\" и \"о\", короче все работает кроме этого кхе-кхе банка Добрый день! Мы сожалеем, что ваш опыт использования нашего маркетплейса не оправдал ожидания. Чтобы мы могли лучше понять и решить вашу проблему, пожалуйста, расскажите, какие именно продукты или услуги у вас не работает? Спасибо!",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:54:41.521781+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "722ffbfb9c8987d195fbd21c3addd43757df05435386c3a07d5062b0b9d10a88"
+  },
+  {
+    "package_id": "ru.pyaterochka.app.browser",
+    "app_name": "Пятёрочка: доставка продуктов",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.pyaterochka.app.browser",
+    "title": "Пятёрочка: доставка продуктов",
+    "snippet": "приложение перестало работать нормально!!! при попытке доставки адрес не фиксируется, выходит ошибка сервера...поддержка тупит, неделю уже не могут решить... безобразие полное!!! Гульфиназ, пожалуйста, очистите cache и cookie приложения в настройках смартфона, отключите VPN, проверьте работу интернета и обновите приложение до последней версии. Если это не поможет, напишите в группу «Пятёрочка. Поддержка» (https://vk.com/pyaterochka_help). Мы уточним у вас детали о вашем гаджете и обязательно во всём разберёмся.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:54:41.828247+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "ea51ff2660ea2935b1665606fd84b1b2c85db33a535414831a2eced79365f57f"
+  },
+  {
+    "package_id": "ru.mts.mtstv",
+    "app_name": "КИОН – фильмы, сериалы и тв",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.mts.mtstv",
+    "title": "КИОН – фильмы, сериалы и тв",
+    "snippet": "не рабочее приложение мтс жулики Жаль, что у вас сложилось такое мнение. Попробуйте, пожалуйста, следующее, отключите VPN, измерьте скорость интернета на любом сайте проверки скорости. Нужно минимум 1 Мбит в сек. Удалите и переустановите КИОН. Перезагрузите устройство. Если не помогло, напишите нам на app@kion.ru Обязательно укажите номер телефона. Всё проверим.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:54:54.759488+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "27d9ce35cbb6c0fb920168ee0c176702ac03ded7e54adde3c1a7dd555e03eac5"
+  },
+  {
+    "package_id": "creditapp.onlinecard.miczaim",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=creditapp.onlinecard.miczaim",
+    "title": "creditapp.onlinecard.miczaim",
+    "snippet": "убогое приложение или банк. на мобильном интернете не работает, с впн не работает, пользоваться не возможно. хотя на этом же впн работают и госуслуги, и макс, и телеграмм, и зеленный банк на \"с\", красный на \"а\", и синие на \"в\" и \"о\", короче все работает кроме этого кхе-кхе банка Добрый день! Мы сожалеем, что ваш опыт использования нашего маркетплейса не оправдал ожидания. Чтобы мы могли лучше понять и решить вашу проблему, пожалуйста, расскажите, какие именно продукты или услуги у вас не работает? Спасибо!",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:55:18.015005+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "d77abce55d5b0ad83b5cbf93c632bf50026d33b34c737afd074002f35107f21d"
+  },
+  {
+    "package_id": "ru.mts.mtstv",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.mts.mtstv",
+    "title": "ru.mts.mtstv",
+    "snippet": "не рабочее приложение мтс жулики Жаль, что у вас сложилось такое мнение. Попробуйте, пожалуйста, следующее, отключите VPN, измерьте скорость интернета на любом сайте проверки скорости. Нужно минимум 1 Мбит в сек. Удалите и переустановите КИОН. Перезагрузите устройство. Если не помогло, напишите нам на app@kion.ru Обязательно укажите номер телефона. Всё проверим.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:55:20.565817+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "6a5ba674dca110e953883affa09eec36ed5deec09bb988b8e79f9797e76d40e2"
   }
 ]

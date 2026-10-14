@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-14T18:43:33.867128+00:00",
+  "updated_at": "2026-10-14T18:55:23.160673+00:00",
   "apps": [
     {
       "package_id": "club.chizhik",
@@ -168,6 +168,24 @@
       "direct_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
+    },
+    {
+      "package_id": "creditapp.onlinecard.miczaim",
+      "names": [
+        "Банк Онлайн: Т кредит и карты"
+      ],
+      "first_seen": "2026-10-14T18:54:41.521781+00:00",
+      "last_seen": "2026-10-14T18:55:18.015005+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "direct_store_evidence": true,
+      "status": "confirmed",
+      "reason": "direct_store_evidence"
     },
     {
       "package_id": "de.wetteronline.wetterapp",
@@ -468,14 +486,14 @@
         "КИОН – фильмы, сериалы и тв"
       ],
       "first_seen": "2026-10-14T18:43:04.049927+00:00",
-      "last_seen": "2026-10-14T18:43:31.228897+00:00",
+      "last_seen": "2026-10-14T18:55:20.565817+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 2,
+      "evidence_count": 4,
       "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "direct_store_evidence"
@@ -544,7 +562,7 @@
         "Пятёрочка: доставка продуктов"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T18:42:53.061899+00:00",
+      "last_seen": "2026-10-14T18:54:41.828247+00:00",
       "source_domains": [
         "kod.ru",
         "meduza.io",
@@ -553,7 +571,7 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 5,
       "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
