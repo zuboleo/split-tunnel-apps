@@ -5,15 +5,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .article_parser import ArticleParser
-from .seed import load_seed
 from .dataset import build_apps, load_id_set, merge_evidence, save_json, write_outputs
 from .discovery import BingRssSearch
-from .evidence_classifier import classify
+from .evidence_engine import analyze_review, analyze_text
 from .http import build_session, domain_of
 from .link_finder import LinkFinder
 from .models import Evidence, SearchHit
 from .normalize import Normalizer
 from .package_resolver import PackageResolver
+from .seed import load_seed
 from .stores import GooglePlayParser, RuStoreParser, parser_for_url
 
 log = logging.getLogger(__name__)
@@ -45,9 +45,6 @@ class Orchestrator:
         if match.package_id:
             return parser, match
 
-        # Samsung/Huawei search results can expose a store-specific app ID in
-        # the URL while the Android package name lives in embedded page JSON.
-        # Fetch the page only when URL/snippet parsing was insufficient.
         try:
             response = self.session.get(hit.url, timeout=15)
             response.raise_for_status()
@@ -57,21 +54,18 @@ class Orchestrator:
         return parser, match
 
     def _evidence_from_store_hit(self, hit: SearchHit) -> Evidence | None:
-        combined = " ".join(x for x in (hit.title, hit.snippet) if x)
-        classification = classify(combined)
-        if not classification.relevant:
-            return None
-
         parser, match = self._parse_store_hit(hit)
         if not parser or not match or not match.package_id:
             return None
 
-        title_l = (match.app_name or hit.title).lower()
-        if ("vpn" in title_l or "proxy" in title_l) and not any(
-            key in classification.strong_matches
-            for key in ("disable_vpn_ru", "not_work_with_vpn_ru", "disable_vpn_en", "not_work_with_vpn_en")
-        ):
+        classification = analyze_text(
+            " ".join(x for x in (hit.title, hit.snippet) if x),
+            role="search_snippet",
+            app_name=match.app_name,
+        )
+        if classification.verdict not in {"positive", "negative"}:
             return None
+
         return Evidence(
             package_id=match.package_id,
             app_name=match.app_name,
@@ -87,12 +81,16 @@ class Orchestrator:
             published_at=hit.published_at,
             store=parser.store_id,
             query=hit.query,
+            verdict=classification.verdict,
+            confidence=classification.confidence,
+            negative_matches=classification.negative_matches,
         )
 
     def _evidence_from_article_hit(self, hit: SearchHit, allow_resolver_search: bool) -> list[Evidence]:
         doc = self.article_parser.parse(hit)
-        if not doc.classification.relevant:
+        if doc.classification.verdict not in {"positive", "negative"}:
             return []
+
         names = list(doc.known_apps)
         for candidate in doc.candidate_names:
             if candidate not in names:
@@ -105,6 +103,7 @@ class Orchestrator:
         if allow_resolver_search and self._dynamic_resolves_left > 0:
             selected_unknown = unknown_names[: self._dynamic_resolves_left]
             self._dynamic_resolves_left -= len(selected_unknown)
+
         for name in known_names + selected_unknown:
             package_id = self.resolver.resolve(name, allow_search=allow_resolver_search)
             if not package_id:
@@ -118,13 +117,16 @@ class Orchestrator:
                     source_domain=domain_of(doc.url) or domain_of(hit.url),
                     url=doc.url,
                     title=doc.title,
-                    snippet=hit.snippet[:1200],
+                    snippet=(doc.text or hit.snippet)[:1200],
                     score=doc.classification.score,
                     strong_matches=doc.classification.strong_matches,
                     discovered_at=datetime.now(timezone.utc).isoformat(),
                     published_at=hit.published_at,
                     store=None,
                     query=hit.query,
+                    verdict=doc.classification.verdict,
+                    confidence=doc.classification.confidence,
+                    negative_matches=doc.classification.negative_matches,
                 )
             )
         return evidence
@@ -133,17 +135,19 @@ class Orchestrator:
         self,
         package_ids: list[str],
         limit_apps: int = 40,
-        max_evidence_per_app: int = 2,
+        max_evidence_per_app: int = 3,
     ) -> list[Evidence]:
         parser = GooglePlayParser()
         evidence: list[Evidence] = []
         for package_id in package_ids[:limit_apps]:
             app_matches = 0
-            for text in parser.fetch_recent_reviews(package_id, count=50):
-                c = classify(text)
-                if not c.relevant:
+            for review_text, developer_reply in parser.fetch_recent_reviews(package_id, count=50):
+                classification = analyze_review(review_text, developer_reply, app_name=package_id)
+                if classification.verdict not in {"positive", "negative"}:
                     continue
-                url = f"https://play.google.com/store/apps/details?id={package_id}"
+                snippet = review_text.strip()
+                if developer_reply:
+                    snippet = f"{snippet}\nDeveloper reply: {developer_reply}".strip()
                 evidence.append(
                     Evidence(
                         package_id=package_id,
@@ -151,14 +155,17 @@ class Orchestrator:
                         source_type="store",
                         source_id="google_play_reviews",
                         source_domain="play.google.com",
-                        url=url,
+                        url=f"https://play.google.com/store/apps/details?id={package_id}",
                         title=package_id,
-                        snippet=text[:1200],
-                        score=c.score,
-                        strong_matches=c.strong_matches,
+                        snippet=snippet[:1200],
+                        score=classification.score,
+                        strong_matches=classification.strong_matches,
                         discovered_at=datetime.now(timezone.utc).isoformat(),
                         store="google_play",
                         query="deep_review_recheck",
+                        verdict=classification.verdict,
+                        confidence=classification.confidence,
+                        negative_matches=classification.negative_matches,
                     )
                 )
                 app_matches += 1
@@ -198,17 +205,25 @@ class Orchestrator:
                         per_query=10,
                         review_count=60,
                         max_apps=120,
-                        max_evidence_per_app=2,
+                        max_evidence_per_app=3,
                     )
                 )
-                new_evidence.extend(RuStoreParser().scan_reviews(self.session, max_apps=120))
+                new_evidence.extend(
+                    RuStoreParser().scan_reviews(
+                        self.session,
+                        search=self.search,
+                        discovery_queries=store_queries,
+                        max_apps=120,
+                        max_evidence_per_app=3,
+                    )
+                )
 
                 known_ids = sorted(set(seed) | {e.package_id for e in new_evidence if e.package_id})
                 new_evidence.extend(
                     self._deep_google_play_recheck(
                         known_ids,
                         limit_apps=120,
-                        max_evidence_per_app=2,
+                        max_evidence_per_app=3,
                     )
                 )
 
