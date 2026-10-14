@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .evidence_engine import analyze_review, analyze_text
 from .models import Evidence
 
 
@@ -18,7 +19,6 @@ _EXPLICIT_MATCHES = {
     "requires_disable_vpn_en",
     "vpn_detected_en",
     "blocked_with_vpn_en",
-    # Backward compatibility with evidence produced before the shared engine.
     "detected_vpn_ru",
     "access_blocked_vpn_ru",
 }
@@ -44,15 +44,58 @@ def save_json(path: Path, data) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=False)
 
 
+def _reanalyze_row(row: dict) -> dict:
+    """Run persisted evidence through today's shared semantic engine.
+
+    Evidence is data, not a frozen classifier decision. This lets a parser/core
+    fix immediately clean yesterday's false positives without waiting for the
+    exact same review to be rediscovered.
+    """
+    updated = dict(row)
+    snippet = str(updated.get("snippet") or "").strip()
+    if not snippet:
+        return updated
+
+    app_name = updated.get("app_name") or updated.get("title")
+    source_type = str(updated.get("source_type") or "")
+    query = str(updated.get("query") or "")
+    was_legacy = "verdict" not in updated or "confidence" not in updated
+
+    marker = "\nDeveloper reply: "
+    if marker in snippet:
+        review_text, developer_reply = snippet.split(marker, 1)
+        classification = analyze_review(review_text, developer_reply, app_name=app_name)
+    elif source_type == "article":
+        classification = analyze_text(snippet, role="article", app_name=app_name)
+    elif "indexed" in query:
+        classification = analyze_text(snippet, role="search_snippet", app_name=app_name)
+    else:
+        classification = analyze_text(snippet, role="user_review", app_name=app_name)
+
+    confidence = classification.confidence
+    # Old rows often joined a user review and a generic developer support reply
+    # without preserving roles. Unless the current engine sees an explicit
+    # high-confidence relation, don't let that ambiguous legacy row decide an app.
+    if was_legacy and confidence < 0.90:
+        confidence = min(confidence, 0.55)
+
+    updated["score"] = int(round(confidence * 10))
+    updated["strong_matches"] = classification.strong_matches
+    updated["weak_matches"] = classification.weak_matches
+    updated["negative_matches"] = classification.negative_matches
+    updated["verdict"] = classification.verdict
+    updated["confidence"] = round(confidence, 3)
+    return updated
+
+
 def merge_evidence(path: Path, new_items: list[Evidence]) -> list[dict]:
     existing = load_json(path, [])
     by_fp = {row.get("fingerprint"): row for row in existing if row.get("fingerprint")}
     for item in new_items:
         row = item.to_dict()
-        # New schema-aware observations replace an older row with the same
-        # stable fingerprint, upgrading it with verdict/confidence fields.
         by_fp[row["fingerprint"]] = row
-    rows = list(by_fp.values())
+
+    rows = [_reanalyze_row(row) for row in by_fp.values()]
     rows.sort(key=lambda x: (x.get("discovered_at", ""), x.get("package_id") or "", x.get("url") or ""))
     save_json(path, rows)
     return rows
@@ -69,7 +112,6 @@ def _row_verdict(row: dict) -> str:
     verdict = str(row.get("verdict") or "").lower()
     if verdict in {"positive", "negative", "uncertain", "neutral"}:
         return verdict
-    # Old rows had only score/strong_matches and represented positive evidence.
     if row.get("strong_matches") or int(row.get("score") or 0) >= 3:
         return "positive"
     return "uncertain"
@@ -85,8 +127,6 @@ def _row_confidence(row: dict) -> float:
         except (TypeError, ValueError):
             pass
 
-    # Migrate old evidence conservatively. Explicit block/detection stays strong;
-    # a generic "disable VPN" mention becomes moderate rather than definitive.
     strong = set(row.get("strong_matches") or [])
     if strong & _EXPLICIT_MATCHES:
         return 0.92
@@ -109,7 +149,6 @@ def _source_weight(row: dict) -> float:
 
 
 def _aggregate(rows: list[dict]) -> float:
-    """Combine observations without pretending repeated copies are independent."""
     if not rows:
         return 0.0
     counts: defaultdict[str, int] = defaultdict(int)
@@ -118,8 +157,6 @@ def _aggregate(rows: list[dict]) -> float:
         domain = str(row.get("source_domain") or row.get("source_id") or "unknown")
         occurrence = counts[domain]
         counts[domain] += 1
-        # Multiple distinct reviews from one store matter, but less than a new
-        # independent domain. This also stops syndicated duplicates exploding.
         repeat_weight = (1.0, 0.72, 0.50, 0.35)[min(occurrence, 3)]
         confidence = _row_confidence(row) * _source_weight(row) * repeat_weight
         combined = 1.0 - (1.0 - combined) * (1.0 - confidence)
