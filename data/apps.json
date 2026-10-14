@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-14T18:04:29.984670+00:00",
+  "updated_at": "2026-10-14T18:20:58.993143+00:00",
   "apps": [
     {
       "package_id": "com.avito.android",
@@ -25,16 +25,19 @@
         "VK"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:54.287517+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
         "meduza.io",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 4,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 5,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -82,13 +85,16 @@
         "Золотое яблоко"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:54.978202+00:00",
       "source_domains": [
-        "meduza.io"
+        "meduza.io",
+        "play.google.com"
       ],
-      "stores": [],
-      "evidence_count": 1,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -98,14 +104,17 @@
         "Авиасейлс"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:55.134984+00:00",
       "source_domains": [
         "meduza.io",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 2,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 3,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -221,14 +230,17 @@
         "МегаМаркет"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:56.667628+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 2,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 3,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -238,14 +250,17 @@
         "Одноклассники"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:56.895577+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 2,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 3,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -274,14 +289,17 @@
         "Пятёрочка"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:57.350923+00:00",
       "source_domains": [
         "kod.ru",
-        "meduza.io"
+        "meduza.io",
+        "play.google.com"
       ],
-      "stores": [],
-      "evidence_count": 2,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 3,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -291,16 +309,19 @@
         "Госуслуги"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:57.677549+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
         "meduza.io",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 4,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 5,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -310,16 +331,19 @@
         "РЖД"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T18:20:57.873749+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
         "meduza.io",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 4,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 5,
+      "direct_store_evidence": true,
       "status": "confirmed",
       "reason": "seed"
     },

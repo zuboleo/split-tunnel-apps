@@ -1,1 +1,155 @@
-[]
+[
+  {
+    "package_id": "com.vkontakte.android",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=com.vkontakte.android",
+    "title": "com.vkontakte.android",
+    "snippet": "ужас, глючит постоянно , не отправляются сообщения Для решения сложностей, убедитесь, что у вас установлена последняя версия приложения, а ОС Android не ниже 9.0. Перезапустите приложение, очистите его кэш, проверьте работу с Wi-Fi и с мобильным интернетом, отключите VPN и перезагрузите устройство. Найдите другие решения: vk.cc/bf или поделитесь деталями с Поддержкой: vk.cc/bp.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:54.287517+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "2d99b1a0e239016d0f618ed080a35deed3c101824da33493d839284a6a9ca326"
+  },
+  {
+    "package_id": "goldapple.ru.goldapple.customers",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=goldapple.ru.goldapple.customers",
+    "title": "goldapple.ru.goldapple.customers",
+    "snippet": "приложение просто не открывается пишет нет сети, что с впн, что без него, перестановка не помогла Добрый день. Благодарим за отзыв! Пожалуйста, обратитесь в нашу службу поддержки по номеру телефона 8-800-770-70-21 или в Telegram - @GoldappleSupportBot. Мы обязательно поможем наладить работу мобильного приложения! С уважением, Золотое Яблоко.",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:54.978202+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "ce2db3fede2f1330a290995f87b46f0af96a97cf689ec6a6d16f75657c33c087"
+  },
+  {
+    "package_id": "ru.aviasales",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.aviasales",
+    "title": "ru.aviasales",
+    "snippet": "Это самый худший сервер из всех серверов. Как бы, не старался не могу войти в этот Авиасервис не через гугл и не по другому, я поддерживаю людей которые пишут отрицательные комментарии и это правда. Жаль что нельзя поставить пятый часть от одной звезды из всех пяти звёзд Перейдите на вайфай и отключите VPN. Переустановите приложение, перезагрузите телефон и проверьте снова. Если не поможет, войдите в раздел «Профиль», нажмите на значок Авиасейлс в самом низу и отправьте нам данные из буфера обмена в личку любой социальной сети. Укажите почту и номер, которые используете для авторизации, и приложите скриншот ошибки.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:55.134984+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "996dafad32e45270569c1fc40b1df1b8f556e68b7c9169691c4c9ac90e64beed"
+  },
+  {
+    "package_id": "ru.megamarket.marketplace",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.megamarket.marketplace",
+    "title": "ru.megamarket.marketplace",
+    "snippet": "не пускает меня на сайте из-за капчи Влад, пожалуйста, отключите VPN, смените сеть, а затем введите код с картинки. Если проблема останется, пришлите скриншот или запись экрана нам в личные сообщения группы Мегамаркета: ВК – vk.com/megamrkt или ОК – ok.ru/megamrkt Разберёмся в вопросе детальнее",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:56.667628+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "0f5eb3d469a08ef0942ae471d92eae2d7c0741c4d99dc3b98f9e071fdf17b1dc"
+  },
+  {
+    "package_id": "ru.ok.android",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.ok.android",
+    "title": "ru.ok.android",
+    "snippet": "более 15 лет я ваш пользователь и вдруг блок,почему причина?пишут уберите ВПН и все пойдёт. Убираю пишут где интернет, замкнутый круг, помогите снять Galina, спасибо, что написали нам. Подключение через VPN может ограничивать работу некоторых сервисов. Пожалуйста, обратитесь на электронную почту: mobileapp@odnoklassniki.ru. Всё проверим и поможем :)",
+    "score": 3,
+    "strong_matches": [
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:56.895577+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "1f991dc2fe7dd0d143dad00d4b20e9b02a9925d91cf583d5c73ba49d64d299f5"
+  },
+  {
+    "package_id": "ru.pyaterochka.app.browser",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.pyaterochka.app.browser",
+    "title": "ru.pyaterochka.app.browser",
+    "snippet": "Не работает приложение на доставку! Пишет сервер не доступен. Кристина, пожалуйста, очистите cache и cookie приложения в настройках смартфона, отключите VPN, проверьте работу интернета и обновите приложение до последней версии. Если это не поможет, напишите в чате мобильного приложения в разделе «Связаться». Мы уточним у вас детали о вашем гаджете и обязательно во всём разберёмся.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:57.350923+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "d376035040b3ce30489f9efd73431b514611a11dc8b0d1d200fc980e1afb01d2"
+  },
+  {
+    "package_id": "ru.rostel",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.rostel",
+    "title": "ru.rostel",
+    "snippet": "вообще не грузит Рекомендуем отключить в телефоне функцию \"Частный DNS-сервер\" и в настройках мобильного браузера разрешить использовать JavaScript. Необходимо отключить VPN и блокировщики контента, используйте стабильное Интернет-соединение. При сохранении затруднения обратитесь в службу поддержки через веб-версию портала, вкладка \"Помощь\" → \"Другие способы связи",
+    "score": 7,
+    "strong_matches": [
+      "disable_vpn_ru",
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:57.677549+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "9b46dfbc5a49a52305b7805dfc7d88eb1340542aab803e1f69817bead7359d98"
+  },
+  {
+    "package_id": "ru.rzd.pass",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.rzd.pass",
+    "title": "ru.rzd.pass",
+    "snippet": "не понимаю, что происходит с приложением: интернет есть, VPN отключен, но у меня пишется, что нет сети или надо отключить vpn. Билеты надо было взять срочно. Как итог, из-за этого происшествия билеты я взять не успел, а потом имел неприятности. Продолжайте в том же духе Стабильность работы приложения может зависеть от качества соединения и особенностей работы используемого устройства. При возникновении непредвиденных ошибок рекомендуем перезапустить устройство, проверить качество интернет-соединения, использовать другой тип подключения или интернет от другого провайдера, очистить кэш, перезапустить приложение.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T18:20:57.873749+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "3d930b9c15d6f716ca52c8f643167ce2043359e4cb9c5611b789ecab549d7640"
+  }
+]
