@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html as html_lib
 import logging
 import re
 from collections import deque
@@ -10,7 +9,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from ..evidence_engine import analyze_text
+from ..evidence_engine import analyze_review, analyze_text
 from ..models import Evidence, SearchHit
 from .base import StoreMatch, StoreParser
 
@@ -22,10 +21,10 @@ _VPN_TOKEN = re.compile(r"\b(?:vpn|впн|proxy|прокси)\b", re.I)
 class RuStoreParser(StoreParser):
     store_id = "rustore"
     _path_re = re.compile(r"/catalog/app/([^/?#]+)")
+    feedback_endpoint = "https://web-api.rustore.ru/v1/showcase/web/feedbacks/comments/{package_id}"
 
-    # These are not application names. They are search phrases aimed directly
-    # at indexed RuStore review pages, which is much more efficient than hoping
-    # a random top-120 catalogue sample contains a VPN-sensitive application.
+    # Search-engine discovery is kept as an additional source, but direct
+    # feedback API scanning is the primary path now.
     REVIEW_SEARCH_PHRASES = (
         '"требует отключить VPN"',
         '"требует выключить VPN"',
@@ -68,6 +67,10 @@ class RuStoreParser(StoreParser):
     def reviews_url(cls, package_id: str) -> str:
         return f"{cls.app_url(package_id)}/reviews"
 
+    @classmethod
+    def feedback_url(cls, package_id: str) -> str:
+        return cls.feedback_endpoint.format(package_id=package_id)
+
     def _collect_app_links(self, page_url: str, html: str) -> list[tuple[str, str]]:
         soup = BeautifulSoup(html, "lxml")
         found: list[tuple[str, str]] = []
@@ -85,9 +88,10 @@ class RuStoreParser(StoreParser):
         self,
         session: requests.Session,
         *,
-        max_apps: int = 160,
-        expansion_pages: int = 24,
+        max_apps: int = 80,
+        expansion_pages: int = 16,
     ) -> dict[str, str]:
+        """Take a bounded sample from current public catalogue pages."""
         queue: deque[str] = deque(
             [
                 "https://www.rustore.ru/catalog",
@@ -127,10 +131,10 @@ class RuStoreParser(StoreParser):
         session: requests.Session,
         queries: list[str],
         *,
-        per_query: int = 20,
-        max_apps: int = 160,
+        per_query: int = 12,
+        max_apps: int = 140,
     ) -> dict[str, str]:
-        """Diversify direct scanning with RuStore's public showcase search backend."""
+        """Build a broad candidate pool through RuStore's public app search."""
         found: dict[str, str] = {}
         endpoint = "https://backapi.rustore.ru/applicationData/apps"
         for query in queries:
@@ -140,6 +144,7 @@ class RuStoreParser(StoreParser):
                 response = session.get(
                     endpoint,
                     params={"pageSize": per_query, "pageNumber": 0, "query": query},
+                    headers={"ruStoreVerCode": "110802"},
                     timeout=20,
                 )
                 response.raise_for_status()
@@ -154,10 +159,85 @@ class RuStoreParser(StoreParser):
                     found.setdefault(package_id, row.get("appName") or package_id)
                 if len(found) >= max_apps:
                     break
+        log.info("RuStore search discovery: %d apps", len(found))
         return found
 
     @staticmethod
+    def _reply_text(reply: object) -> str:
+        if not isinstance(reply, dict):
+            return ""
+        for key in ("comment", "text", "reply", "message"):
+            value = reply.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+
+    @classmethod
+    def reviews_from_payload(cls, payload: object) -> list[tuple[str, str, str | None]]:
+        """Normalize RuStore feedback payload into (review, reply, date)."""
+        if not isinstance(payload, dict):
+            return []
+        result: list[tuple[str, str, str | None]] = []
+        for row in payload.get("elements") or []:
+            if not isinstance(row, dict):
+                continue
+            comment = row.get("comment")
+            if not isinstance(comment, str) or not comment.strip():
+                continue
+            replies = [cls._reply_text(item) for item in (row.get("replies") or [])]
+            reply = " ".join(text for text in replies if text)
+            result.append((comment.strip(), reply, row.get("commentDate")))
+        return result
+
+    def fetch_reviews_api(
+        self,
+        session: requests.Session,
+        package_id: str,
+        *,
+        limit: int = 60,
+        max_pages: int = 2,
+    ) -> list[tuple[str, str, str | None]]:
+        """Fetch actual RuStore reviews from the public web feedback endpoint."""
+        url = self.feedback_url(package_id)
+        reviews: list[tuple[str, str, str | None]] = []
+        continuation: str | None = None
+        seen_cursors: set[str] = set()
+
+        for _ in range(max_pages):
+            params: dict[str, object] = {"limit": limit, "sortBy": "NEW_FIRST"}
+            if continuation and continuation not in {"0", "null", "None"}:
+                params["continuation"] = continuation
+            try:
+                response = session.get(
+                    url,
+                    params=params,
+                    headers={
+                        "Accept": "application/json, text/plain, */*",
+                        "Referer": self.reviews_url(package_id),
+                        "Origin": "https://www.rustore.ru",
+                    },
+                    timeout=20,
+                )
+                if response.status_code == 404:
+                    return reviews
+                response.raise_for_status()
+                payload = response.json()
+            except Exception as exc:
+                log.debug("RuStore feedback API failed for %s: %s", package_id, exc)
+                return reviews
+
+            reviews.extend(self.reviews_from_payload(payload))
+            next_cursor = str(payload.get("continuation") or "") if isinstance(payload, dict) else ""
+            if not next_cursor or next_cursor in {"0", "null", "None"} or next_cursor in seen_cursors:
+                break
+            seen_cursors.add(next_cursor)
+            continuation = next_cursor
+
+        return reviews
+
+    @staticmethod
     def _vpn_fragments(text: str, *, radius: int = 260, limit: int = 12) -> list[str]:
+        """Fallback for HTML-only delivery if the feedback API changes."""
         if not text:
             return []
         fragments: list[str] = []
@@ -173,38 +253,18 @@ class RuStoreParser(StoreParser):
                 break
         return fragments
 
-    def fetch_review_fragments(self, session: requests.Session, package_id: str) -> tuple[list[str], str]:
-        """Extract VPN-centred text from visible HTML and embedded page JSON.
-
-        RuStore changes rendering frequently. Reading both visible text and raw
-        HTML catches server-rendered reviews as well as review payloads embedded
-        into script state. If the page is only a JS shell, indexed-review search
-        below remains the fallback.
-        """
+    def fetch_review_fragments(self, session: requests.Session, package_id: str) -> list[str]:
         url = self.reviews_url(package_id)
         try:
             response = session.get(url, timeout=20)
             response.raise_for_status()
         except Exception as exc:
-            log.warning("RuStore reviews failed for %s: %s", package_id, exc)
-            return [], url
+            log.debug("RuStore review HTML failed for %s: %s", package_id, exc)
+            return []
+        return self._vpn_fragments(BeautifulSoup(response.text, "lxml").get_text(" ", strip=True))
 
-        soup = BeautifulSoup(response.text, "lxml")
-        visible = soup.get_text(" ", strip=True)
-        raw = html_lib.unescape(response.text)
-        fragments = self._vpn_fragments(visible)
-        if len(fragments) < 12:
-            for fragment in self._vpn_fragments(raw, limit=12 - len(fragments)):
-                clean = BeautifulSoup(fragment, "lxml").get_text(" ", strip=True)
-                clean = re.sub(r"\\[nrt]", " ", clean)
-                clean = clean.replace('\\"', '"')
-                clean = re.sub(r"\s+", " ", clean).strip()
-                if clean and clean not in fragments:
-                    fragments.append(clean)
-        return fragments, url
-
-    def scan_indexed_reviews(self, search, *, limit_per_phrase: int = 10) -> list[Evidence]:
-        """Find RuStore review pages whose indexed snippets already mention VPN."""
+    def scan_indexed_reviews(self, search, *, limit_per_phrase: int = 8) -> list[Evidence]:
+        """Keep indexed review search as a supplementary discovery channel."""
         evidence: list[Evidence] = []
         seen: set[tuple[str, str, str]] = set()
 
@@ -213,7 +273,7 @@ class RuStoreParser(StoreParser):
             try:
                 hits = search.search(query, limit=limit_per_phrase)
             except Exception as exc:
-                log.warning("RuStore indexed review search failed for %r: %s", phrase, exc)
+                log.debug("RuStore indexed review search failed for %r: %s", phrase, exc)
                 continue
 
             for hit in hits:
@@ -258,51 +318,103 @@ class RuStoreParser(StoreParser):
         log.info("RuStore indexed review scan: %d evidence rows", len(evidence))
         return evidence
 
+    def discover_candidates(
+        self,
+        session: requests.Session,
+        *,
+        discovery_queries: list[str],
+        priority_package_ids: list[str] | None,
+        max_apps: int,
+    ) -> dict[str, str]:
+        """Mix known/watchlisted, search and catalogue candidates.
+
+        The previous implementation filled max_apps from the first catalogue
+        page before search results were appended, so search discovery was never
+        scanned. Priority IDs are candidates only; they still need live review
+        evidence before the shared evidence engine can confirm them.
+        """
+        result: dict[str, str] = {}
+        for package_id in priority_package_ids or []:
+            result.setdefault(package_id, package_id)
+            if len(result) >= max_apps:
+                return result
+
+        search_budget = max(0, int(max_apps * 0.70) - len(result))
+        if search_budget:
+            searched = self.discover_search_api(
+                session,
+                discovery_queries,
+                per_query=12,
+                max_apps=search_budget,
+            )
+            for package_id, app_name in searched.items():
+                result.setdefault(package_id, app_name)
+                if len(result) >= max_apps:
+                    return result
+
+        catalog_budget = max_apps - len(result)
+        if catalog_budget:
+            catalog = self.discover_catalog(session, max_apps=catalog_budget)
+            for package_id, app_name in catalog.items():
+                result.setdefault(package_id, app_name)
+                if len(result) >= max_apps:
+                    break
+
+        log.info("RuStore candidate pool: %d apps", len(result))
+        return result
+
     def scan_reviews(
         self,
         session: requests.Session,
         *,
         search=None,
         discovery_queries: list[str] | None = None,
-        max_apps: int = 160,
+        priority_package_ids: list[str] | None = None,
+        max_apps: int = 180,
         max_evidence_per_app: int = 3,
     ) -> list[Evidence]:
-        packages = self.discover_catalog(session, max_apps=max_apps)
-        if discovery_queries:
-            for package_id, app_name in self.discover_search_api(
-                session,
-                discovery_queries,
-                per_query=15,
-                max_apps=max_apps,
-            ).items():
-                if len(packages) >= max_apps:
-                    break
-                packages.setdefault(package_id, app_name)
+        packages = self.discover_candidates(
+            session,
+            discovery_queries=discovery_queries or [],
+            priority_package_ids=priority_package_ids,
+            max_apps=max_apps,
+        )
 
         evidence: list[Evidence] = []
         matched_apps = 0
-        for package_id, app_name in list(packages.items())[:max_apps]:
-            fragments, url = self.fetch_review_fragments(session, package_id)
+        api_reviews = 0
+        for package_id, app_name in packages.items():
+            reviews = self.fetch_reviews_api(session, package_id, limit=60, max_pages=2)
+            api_reviews += len(reviews)
             app_matches = 0
-            for fragment in fragments:
-                classification = analyze_text(fragment, role="user_review", app_name=app_name)
+
+            for review_text, developer_reply, published_at in reviews:
+                classification = analyze_review(
+                    review_text,
+                    developer_reply,
+                    app_name=None if app_name == package_id else app_name,
+                )
                 if classification.verdict not in {"positive", "negative"}:
                     continue
+                snippet = review_text
+                if developer_reply:
+                    snippet = f"{snippet}\nDeveloper reply: {developer_reply}"
                 evidence.append(
                     Evidence(
                         package_id=package_id,
-                        app_name=app_name,
+                        app_name=None if app_name == package_id else app_name,
                         source_type="store",
-                        source_id="rustore_reviews",
+                        source_id="rustore_reviews_api",
                         source_domain="rustore.ru",
-                        url=url,
+                        url=self.reviews_url(package_id),
                         title=app_name,
-                        snippet=fragment[:1200],
+                        snippet=snippet[:1200],
                         score=classification.score,
                         strong_matches=classification.strong_matches,
                         discovered_at=datetime.now(timezone.utc).isoformat(),
+                        published_at=published_at,
                         store=self.store_id,
-                        query="direct_store_scan",
+                        query="direct_store_api_scan",
                         verdict=classification.verdict,
                         confidence=classification.confidence,
                         negative_matches=classification.negative_matches,
@@ -311,12 +423,44 @@ class RuStoreParser(StoreParser):
                 app_matches += 1
                 if app_matches >= max_evidence_per_app:
                     break
+
+            # HTML fallback only when API gave us nothing at all for this app.
+            if not reviews:
+                for fragment in self.fetch_review_fragments(session, package_id):
+                    classification = analyze_text(fragment, role="user_review", app_name=app_name)
+                    if classification.verdict not in {"positive", "negative"}:
+                        continue
+                    evidence.append(
+                        Evidence(
+                            package_id=package_id,
+                            app_name=None if app_name == package_id else app_name,
+                            source_type="store",
+                            source_id="rustore_reviews_html",
+                            source_domain="rustore.ru",
+                            url=self.reviews_url(package_id),
+                            title=app_name,
+                            snippet=fragment[:1200],
+                            score=classification.score,
+                            strong_matches=classification.strong_matches,
+                            discovered_at=datetime.now(timezone.utc).isoformat(),
+                            store=self.store_id,
+                            query="direct_store_html_fallback",
+                            verdict=classification.verdict,
+                            confidence=classification.confidence,
+                            negative_matches=classification.negative_matches,
+                        )
+                    )
+                    app_matches += 1
+                    if app_matches >= max_evidence_per_app:
+                        break
+
             if app_matches:
                 matched_apps += 1
 
         log.info(
-            "RuStore direct scan: %d apps checked, %d apps with VPN evidence, %d evidence rows",
-            min(len(packages), max_apps),
+            "RuStore direct scan: %d apps checked, %d reviews fetched, %d apps with VPN evidence, %d evidence rows",
+            len(packages),
+            api_reviews,
             matched_apps,
             len(evidence),
         )

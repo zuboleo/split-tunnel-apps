@@ -1,0 +1,15 @@
+# Bootstrap candidates with previously observed public RuStore VPN-related reviews.
+# Presence here does NOT confirm an app. The live RuStore review API is checked
+# and the shared evidence engine decides whether evidence is positive/negative.
+ru.desport.android
+com.uchi.app
+softrust.application2dr
+ru.mos.um
+com.awesomeproject.test
+com.xlproject.adrama
+ru.nskes.paysphera
+ru.pesc.ikus
+ru.vaamelin.ffconfig3
+ru.vaamelin.FFConfig
+ru.pyaterochka.app.browser
+ru.yandex.yandexnavi

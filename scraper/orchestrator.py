@@ -198,6 +198,8 @@ class Orchestrator:
                     "магазин", "банк", "доставка", "аптека", "транспорт",
                     "госуслуги", "маркет", "такси", "погода", "кино",
                     "работа", "жкх", "билеты", "еда", "здоровье",
+                    "спорт", "школа", "образование", "парковка", "регистратура",
+                    "оплата", "медицина", "страхование", "путешествия", "ритейл",
                 ]
                 new_evidence.extend(
                     GooglePlayParser().scan_reviews(
@@ -208,12 +210,18 @@ class Orchestrator:
                         max_evidence_per_app=3,
                     )
                 )
+
+                # Priority IDs are only candidates for a live RuStore recheck.
+                # They do not become confirmed merely by being watchlisted.
+                rustore_watchlist = load_id_set(self.data / "rustore_watchlist.txt")
+                rustore_priority = sorted(set(seed) | rustore_watchlist)
                 new_evidence.extend(
                     RuStoreParser().scan_reviews(
                         self.session,
                         search=self.search,
                         discovery_queries=store_queries,
-                        max_apps=120,
+                        priority_package_ids=rustore_priority,
+                        max_apps=180,
                         max_evidence_per_app=3,
                     )
                 )

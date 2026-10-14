@@ -41,6 +41,32 @@ def test_rustore_catalog_link_extraction() -> None:
     assert rows == [("ru.example.app", "Example App")]
 
 
+def test_rustore_feedback_payload_shape() -> None:
+    payload = {
+        "elements": [
+            {
+                "id": 2409975036,
+                "rating": 1,
+                "comment": "Не работает. Пишет впн выключить. Впн не установлен.",
+                "commentDate": "2026-06-13T10:08:49.745Z",
+                "replies": [
+                    {"comment": "Проверим проблему."},
+                ],
+            },
+            {"id": 2, "rating": 5, "comment": "   ", "replies": []},
+        ],
+        "continuation": "0",
+    }
+    rows = RuStoreParser.reviews_from_payload(payload)
+    assert rows == [
+        (
+            "Не работает. Пишет впн выключить. Впн не установлен.",
+            "Проверим проблему.",
+            "2026-06-13T10:08:49.745Z",
+        )
+    ]
+
+
 def test_rustore_indexed_review_scan_finds_explicit_block() -> None:
     evidence = RuStoreParser().scan_indexed_reviews(FakeSearch(), limit_per_phrase=1)
     assert evidence
