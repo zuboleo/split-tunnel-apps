@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 
 from .evidence_engine import analyze_review, analyze_text
@@ -13,12 +15,14 @@ _EXPLICIT_MATCHES = {
     "false_vpn_detection_ru",
     "requires_disable_vpn_ru",
     "vpn_detected_ru",
+    "vpn_allergy_ru",
     "blocked_with_vpn_ru",
     "vpn_blocks_access_ru",
     "false_vpn_detection_en",
     "requires_disable_vpn_en",
     "vpn_detected_en",
     "blocked_with_vpn_en",
+    "vpn_blocks_access_en",
     "detected_vpn_ru",
     "access_blocked_vpn_ru",
 }
@@ -44,12 +48,54 @@ def save_json(path: Path, data) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=False)
 
 
+def _normalized_snippet(value: object) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip().lower()
+    return text
+
+
+def _observation_fingerprint(row: dict) -> str:
+    """Stable identity for one observation, independent of parser metadata.
+
+    Direct scan and deep recheck can see the exact same store review with a
+    different app title/name. Those are one observation and must not increase
+    confidence twice.
+    """
+    payload = "\n".join(
+        [
+            str(row.get("package_id") or ""),
+            str(row.get("source_type") or ""),
+            str(row.get("source_id") or ""),
+            str(row.get("url") or ""),
+            _normalized_snippet(row.get("snippet")),
+        ]
+    )
+    return sha256(payload.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def _merge_observation(previous: dict, current: dict) -> dict:
+    merged = dict(previous)
+    for key, value in current.items():
+        if value not in (None, "", [], {}):
+            merged[key] = value
+
+    # Keep useful human metadata when a later deep recheck only knows package ID.
+    old_name = previous.get("app_name")
+    new_name = current.get("app_name")
+    if old_name and (not new_name or new_name == current.get("package_id")):
+        merged["app_name"] = old_name
+
+    dates = [x for x in (previous.get("discovered_at"), current.get("discovered_at")) if x]
+    if dates:
+        merged["discovered_at"] = min(dates)
+    return merged
+
+
 def _reanalyze_row(row: dict) -> dict:
     """Run persisted evidence through today's shared semantic engine.
 
-    Evidence is data, not a frozen classifier decision. This lets a parser/core
-    fix immediately clean yesterday's false positives without waiting for the
-    exact same review to be rediscovered.
+    Evidence is data, not a frozen classifier decision. A core fix therefore
+    cleans yesterday's false positives without waiting for the same review to
+    be rediscovered.
     """
     updated = dict(row)
     snippet = str(updated.get("snippet") or "").strip()
@@ -73,9 +119,8 @@ def _reanalyze_row(row: dict) -> dict:
         classification = analyze_text(snippet, role="user_review", app_name=app_name)
 
     confidence = classification.confidence
-    # Old rows often joined a user review and a generic developer support reply
-    # without preserving roles. Unless the current engine sees an explicit
-    # high-confidence relation, don't let that ambiguous legacy row decide an app.
+    # Legacy rows sometimes joined a user review and generic support advice
+    # without preserving roles. Weak legacy positives should not decide an app.
     if was_legacy and confidence < 0.90:
         confidence = min(confidence, 0.55)
 
@@ -85,17 +130,27 @@ def _reanalyze_row(row: dict) -> dict:
     updated["negative_matches"] = classification.negative_matches
     updated["verdict"] = classification.verdict
     updated["confidence"] = round(confidence, 3)
+    updated["fingerprint"] = _observation_fingerprint(updated)
     return updated
 
 
 def merge_evidence(path: Path, new_items: list[Evidence]) -> list[dict]:
     existing = load_json(path, [])
-    by_fp = {row.get("fingerprint"): row for row in existing if row.get("fingerprint")}
-    for item in new_items:
-        row = item.to_dict()
-        by_fp[row["fingerprint"]] = row
+    by_observation: dict[str, dict] = {}
 
-    rows = [_reanalyze_row(row) for row in by_fp.values()]
+    # Existing rows go first; current scan can refresh their metadata. Identity
+    # deliberately ignores app_name/title/query so the same review from direct
+    # scan and deep recheck is counted once.
+    for row in [*existing, *(item.to_dict() for item in new_items)]:
+        key = _observation_fingerprint(row)
+        current = dict(row)
+        current["fingerprint"] = key
+        if key in by_observation:
+            by_observation[key] = _merge_observation(by_observation[key], current)
+        else:
+            by_observation[key] = current
+
+    rows = [_reanalyze_row(row) for row in by_observation.values()]
     rows.sort(key=lambda x: (x.get("discovered_at", ""), x.get("package_id") or "", x.get("url") or ""))
     save_json(path, rows)
     return rows
@@ -148,15 +203,35 @@ def _source_weight(row: dict) -> float:
     return 0.82
 
 
+def _content_key(row: dict) -> str:
+    """Collapse exact syndicated copies even when they live on other domains."""
+    text = _normalized_snippet(row.get("snippet"))
+    if not text:
+        return ""
+    # Remove obvious site/app decoration but retain semantic wording.
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"[^0-9a-zа-яё]+", " ", text, flags=re.I)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _aggregate(rows: list[dict]) -> float:
     if not rows:
         return 0.0
     counts: defaultdict[str, int] = defaultdict(int)
+    seen_content: set[str] = set()
     combined = 0.0
     for row in sorted(rows, key=_row_confidence, reverse=True):
+        content_key = _content_key(row)
+        if content_key and content_key in seen_content:
+            continue
+        if content_key:
+            seen_content.add(content_key)
+
         domain = str(row.get("source_domain") or row.get("source_id") or "unknown")
         occurrence = counts[domain]
         counts[domain] += 1
+        # Multiple distinct reviews from one store matter, but less than a new
+        # independent source. Repeated copies on one domain rapidly diminish.
         repeat_weight = (1.0, 0.72, 0.50, 0.35)[min(occurrence, 3)]
         confidence = _row_confidence(row) * _source_weight(row) * repeat_weight
         combined = 1.0 - (1.0 - combined) * (1.0 - confidence)
