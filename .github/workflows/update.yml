@@ -5,7 +5,15 @@ on:
     branches: [main]
     paths:
       - 'scraper/**'
+      - 'tests/**'
       - 'data/**'
+      - 'requirements.txt'
+      - '.github/workflows/update.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scraper/**'
+      - 'tests/**'
       - 'requirements.txt'
       - '.github/workflows/update.yml'
   schedule:
@@ -16,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: update-app-list
+  group: update-app-list-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,9 +51,11 @@ jobs:
         run: pytest -q
 
       - name: Update application list
+        if: github.event_name != 'pull_request'
         run: python -m scraper.main
 
       - name: Commit updates
+        if: github.event_name != 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
