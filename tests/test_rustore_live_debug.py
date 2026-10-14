@@ -1,4 +1,3 @@
-import html
 import re
 
 import requests
@@ -12,24 +11,7 @@ def test_debug_rustore_delivery():
     })
     package = "ru.desport.android"
     review_url = f"https://www.rustore.ru/catalog/app/{package}/reviews"
-    response = session.get(review_url, timeout=20)
-    response.raise_for_status()
-    page = response.text
-
-    print("\n=== REVIEW HTML VPN CONTEXT ===")
-    upper = page.upper()
-    positions = []
-    for token in ("ВПН", "VPN", "ОТКЛЮЧ"):
-        start = 0
-        while True:
-            index = upper.find(token, start)
-            if index < 0:
-                break
-            positions.append(index)
-            start = index + len(token)
-    for index in sorted(set(positions))[:20]:
-        fragment = html.unescape(page[max(0, index - 500):index + 1200])
-        print("HTML_CTX", re.sub(r"\\s+", " ", fragment))
+    page = session.get(review_url, timeout=20).text
 
     script_urls = []
     for src in re.findall(r'<script[^>]+src=["\']([^"\']+)', page, flags=re.I):
@@ -38,48 +20,53 @@ def test_debug_rustore_delivery():
         if src.startswith("http"):
             script_urls.append(src)
 
-    review_bundles = [url for url in script_urls if "/reviews/page-" in url]
-    print("\n=== REVIEW BUNDLES ===", review_bundles)
-    assert review_bundles, "reviews bundle not found"
+    chunk_ids = (6214, 883, 8331, 9874, 6290, 5125, 73918)
+    print("\n=== PAGE REFERENCES ===")
+    for cid in chunk_ids:
+        for m in re.finditer(str(cid), page):
+            print("PAGE_ID", cid, page[max(0, m.start()-300):m.end()+500])
+            break
 
-    text = session.get(review_bundles[-1], timeout=20).text
-    print("BUNDLE_LEN", len(text))
+    print("\n=== SCRIPT REFERENCES ===")
+    loaded = {}
+    for src in script_urls:
+        text = session.get(src, timeout=20).text
+        loaded[src] = text
+        hits = [cid for cid in chunk_ids if str(cid) in text]
+        if hits:
+            print("SRC", src, "IDS", hits)
+            for cid in hits:
+                m = re.search(str(cid), text)
+                if m:
+                    print("CTX", cid, text[max(0, m.start()-500):m.end()+1000])
 
-    print("\n=== FEEDBACK PATHS ===")
-    paths = sorted(set(re.findall(r'["\']([^"\']*(?:feedback|review)[^"\']*)["\']', text, flags=re.I)))
-    for value in paths:
-        if len(value) < 700:
-            print("PATH", value)
+    print("\n=== CHUNK FILENAMES FROM HTML/RUNTIME ===")
+    all_text = page + "\n" + "\n".join(loaded.values())
+    for cid in chunk_ids:
+        # Next/webpack forms seen in runtime: 6214:"hash" or {6214:"hash"}
+        pats = [
+            rf'{cid}["\']?\s*:\s*["\']([^"\']+)["\']',
+            rf'["\']{cid}["\']\s*:\s*["\']([^"\']+)["\']',
+            rf'{cid}[^\n]{{0,120}}?([0-9a-f]{{8,}})\.js',
+        ]
+        for pat in pats:
+            matches = re.findall(pat, all_text)
+            if matches:
+                print("MAP", cid, matches[:20])
 
-    print("\n=== SHOWCASE CONTEXT ===")
-    for pattern in (
-        r"/v1/showcase/web/feedbacks",
-        r"WEB_GATEWAY_URL",
-        r"feedbacks/comments",
-        r"sortBy",
-        r"continuation",
-    ):
-        print("PATTERN", pattern)
-        count = 0
-        for match in re.finditer(pattern, text, flags=re.I):
-            fragment = text[max(0, match.start() - 700):match.end() + 1300]
-            print("CTX", re.sub(r"\\s+", " ", fragment))
-            count += 1
-            if count >= 12:
+    print("\n=== ALL STATIC CHUNK URLS IN PAGE ===")
+    urls = sorted(set(re.findall(r'(/catalog/_next/static/chunks/[^"\']+?\.js)', page)))
+    for url in urls:
+        print("STATIC", "https://www.rustore.ru" + url)
+
+    # Runtime often contains a function that maps numeric chunk ids to hashed filenames.
+    print("\n=== WEBPACK MAPPER ===")
+    for src, text in loaded.items():
+        if "webpack-" not in src:
+            continue
+        for cid in chunk_ids:
+            for m in re.finditer(str(cid), text):
+                print("WEBPACK", cid, text[max(0, m.start()-1200):m.end()+1600])
                 break
 
-    # Search all page bundles for where WEB_GATEWAY_URL is actually defined.
-    print("\n=== GATEWAY DEFINITION ===")
-    for src in script_urls:
-        try:
-            bundle = session.get(src, timeout=20).text
-        except Exception:
-            continue
-        if "WEB_GATEWAY_URL" not in bundle:
-            continue
-        for match in re.finditer(r"WEB_GATEWAY_URL", bundle):
-            fragment = bundle[max(0, match.start() - 800):match.end() + 1400]
-            print("GATEWAY_SRC", src)
-            print("GATEWAY_CTX", re.sub(r"\\s+", " ", fragment))
-
-    assert False, "intentional debug failure; inspect captured stdout"
+    assert False, "intentional debug failure"
