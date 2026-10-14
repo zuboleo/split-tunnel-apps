@@ -51,7 +51,10 @@ class HuaweiAppGalleryParser(StoreParser):
         # Some AppGallery links contain the real package name in /app/<value>,
         # while the common C123456789 form is an AppGallery ID, not a package.
         if not package_id:
-            path_match = _APP_PATH_RE.search(unquote(parsed.path))
+            route = unquote(parsed.path)
+            if parsed.fragment:
+                route += "/" + unquote(parsed.fragment).lstrip("/")
+            path_match = _APP_PATH_RE.search(route)
             if path_match:
                 package_id = self._valid_package(path_match.group(1))
 
