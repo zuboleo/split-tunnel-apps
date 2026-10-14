@@ -1,13 +1,13 @@
 {
-  "updated_at": "2026-10-14T19:22:38.037740+00:00",
+  "updated_at": "2026-10-14T19:32:28.370486+00:00",
   "apps": [
     {
       "package_id": "club.chizhik",
       "names": [
         "Чижик - доставка продуктов"
       ],
-      "first_seen": "2026-10-14T18:42:54.047150+00:00",
-      "last_seen": "2026-10-14T18:43:25.788819+00:00",
+      "first_seen": "2026-10-14T19:30:55.670026+00:00",
+      "last_seen": "2026-10-14T19:32:15.673997+00:00",
       "source_domains": [
         "play.google.com"
       ],
@@ -15,11 +15,37 @@
         "google_play"
       ],
       "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.977,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
       "status": "confirmed",
-      "reason": "explicit_store_evidence"
+      "reason": "evidence_confidence"
+    },
+    {
+      "package_id": "com.apteka.sklad",
+      "names": [
+        "Аптека Апрель"
+      ],
+      "first_seen": "2026-10-14T19:30:56.885774+00:00",
+      "last_seen": "2026-10-14T19:32:16.110690+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.973,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "confirmed",
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "com.avito.android",
@@ -35,9 +61,12 @@
       ],
       "stores": [],
       "evidence_count": 3,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -47,27 +76,7 @@
         "Drivee: Заказ такси, доставка"
       ],
       "first_seen": "2026-10-14T18:43:00.209901+00:00",
-      "last_seen": "2026-10-14T18:43:26.111792+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 2,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
-      "status": "confirmed",
-      "reason": "multiple_store_evidence"
-    },
-    {
-      "package_id": "com.fls.gosuslugispb",
-      "names": [
-        "Госуслуги Санкт-Петербурга"
-      ],
-      "first_seen": "2026-10-14T18:42:58.161662+00:00",
-      "last_seen": "2026-10-14T19:09:49.396603+00:00",
+      "last_seen": "2026-10-14T19:32:16.626956+00:00",
       "source_domains": [
         "play.google.com"
       ],
@@ -75,11 +84,60 @@
         "google_play"
       ],
       "evidence_count": 4,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.986,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
+    },
+    {
+      "package_id": "com.google.android.youtube",
+      "names": [
+        "YouTube"
+      ],
+      "first_seen": "2026-10-14T19:31:12.681635+00:00",
+      "last_seen": "2026-10-14T19:32:17.073830+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.973,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "confirmed",
+      "reason": "evidence_confidence"
+    },
+    {
+      "package_id": "com.kazanexpress.ke_app",
+      "names": [
+        "Магнит Маркет"
+      ],
+      "first_seen": "2026-10-14T18:42:50.902092+00:00",
+      "last_seen": "2026-10-14T19:30:50.100418+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.949,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "confirmed",
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "com.vkontakte.android",
@@ -87,7 +145,7 @@
         "VK"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T19:09:49.663954+00:00",
+      "last_seen": "2026-10-14T19:32:17.600667+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
@@ -98,10 +156,13 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 6,
+      "evidence_count": 9,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 1,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -120,9 +181,12 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -132,19 +196,22 @@
         "Windy.com - Погода и радар"
       ],
       "first_seen": "2026-10-14T18:43:02.572943+00:00",
-      "last_seen": "2026-10-14T18:43:27.025246+00:00",
+      "last_seen": "2026-10-14T19:32:18.171649+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 2,
+      "evidence_count": 4,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.992,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 4,
       "status": "confirmed",
-      "reason": "explicit_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "com.yandex.bank",
@@ -161,31 +228,14 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
-    },
-    {
-      "package_id": "creditapp.onlinecard.miczaim",
-      "names": [
-        "Банк Онлайн: Т кредит и карты"
-      ],
-      "first_seen": "2026-10-14T18:54:41.521781+00:00",
-      "last_seen": "2026-10-14T18:55:18.015005+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 2,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
-      "status": "confirmed",
-      "reason": "multiple_store_evidence"
     },
     {
       "package_id": "goldapple.ru.goldapple.customers",
@@ -193,7 +243,7 @@
         "Золотое яблоко"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T18:20:54.978202+00:00",
+      "last_seen": "2026-10-14T19:32:19.523077+00:00",
       "source_domains": [
         "meduza.io",
         "play.google.com"
@@ -201,10 +251,13 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 2,
+      "evidence_count": 4,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 1,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 1,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -214,19 +267,22 @@
         "AliExpress - ваш маркетплейс"
       ],
       "first_seen": "2026-10-14T18:42:59.028579+00:00",
-      "last_seen": "2026-10-14T19:09:50.599579+00:00",
+      "last_seen": "2026-10-14T19:32:19.741450+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 9,
+      "positive_evidence_count": 9,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.998,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 4,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 9,
       "status": "confirmed",
-      "reason": "explicit_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.aviasales",
@@ -235,7 +291,7 @@
         "Авиасейлс — авиабилеты дешево"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T19:09:50.751314+00:00",
+      "last_seen": "2026-10-14T19:32:20.310647+00:00",
       "source_domains": [
         "meduza.io",
         "play.google.com",
@@ -244,32 +300,15 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 6,
+      "evidence_count": 12,
+      "positive_evidence_count": 10,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
-    },
-    {
-      "package_id": "ru.beru.android",
-      "names": [
-        "Яндекс Маркет: онлайн-магазин"
-      ],
-      "first_seen": "2026-10-14T18:42:49.820821+00:00",
-      "last_seen": "2026-10-14T18:43:29.575299+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 2,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
-      "status": "confirmed",
-      "reason": "multiple_store_evidence"
     },
     {
       "package_id": "ru.briscloud",
@@ -277,27 +316,7 @@
         "БРИС ЖКХ"
       ],
       "first_seen": "2026-10-14T18:43:09.718745+00:00",
-      "last_seen": "2026-10-14T18:43:29.690378+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 2,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
-      "status": "confirmed",
-      "reason": "explicit_store_evidence"
-    },
-    {
-      "package_id": "ru.bus62.SmartTransport",
-      "names": [
-        "Умный транспорт"
-      ],
-      "first_seen": "2026-10-14T18:42:55.926003+00:00",
-      "last_seen": "2026-10-14T19:09:50.981092+00:00",
+      "last_seen": "2026-10-14T19:32:20.805781+00:00",
       "source_domains": [
         "play.google.com"
       ],
@@ -305,11 +324,14 @@
         "google_play"
       ],
       "evidence_count": 4,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.99,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.detmir.dmbonus",
@@ -325,9 +347,12 @@
       ],
       "stores": [],
       "evidence_count": 3,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -343,30 +368,40 @@
       ],
       "stores": [],
       "evidence_count": 1,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
     {
       "package_id": "ru.dublgis.dgismobile",
       "names": [
-        "2ГИС"
+        "2ГИС",
+        "2ГИС: карты, навигатор, друзья"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14",
+      "last_seen": "2026-10-14T19:32:22.152141+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
         "meduza.io",
+        "play.google.com",
         "rozetked.me"
       ],
-      "stores": [],
-      "evidence_count": 4,
-      "direct_store_evidence": false,
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 6,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -376,19 +411,22 @@
         "Госуслуги Моя школа"
       ],
       "first_seen": "2026-10-14T18:42:57.286395+00:00",
-      "last_seen": "2026-10-14T19:09:51.593785+00:00",
+      "last_seen": "2026-10-14T19:32:22.374700+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 10,
+      "positive_evidence_count": 10,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.974,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 10,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.hh.android",
@@ -404,9 +442,12 @@
       ],
       "stores": [],
       "evidence_count": 3,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -425,9 +466,12 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -443,9 +487,12 @@
       ],
       "stores": [],
       "evidence_count": 1,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -456,7 +503,7 @@
         "Мегамаркет: доставка товаров"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T18:42:59.353757+00:00",
+      "last_seen": "2026-10-14T19:32:23.589481+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "play.google.com",
@@ -465,32 +512,15 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 6,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
-    },
-    {
-      "package_id": "ru.mosgorpass",
-      "names": [
-        "Московский транспорт"
-      ],
-      "first_seen": "2026-10-14T18:42:55.635238+00:00",
-      "last_seen": "2026-10-14T19:08:59.899303+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 3,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 3,
-      "explicit_store_evidence": false,
-      "status": "confirmed",
-      "reason": "multiple_store_evidence"
     },
     {
       "package_id": "ru.mts.mtstv",
@@ -498,19 +528,22 @@
         "КИОН – фильмы, сериалы и тв"
       ],
       "first_seen": "2026-10-14T18:43:04.049927+00:00",
-      "last_seen": "2026-10-14T19:09:52.454702+00:00",
+      "last_seen": "2026-10-14T19:32:24.077275+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 5,
+      "evidence_count": 11,
+      "positive_evidence_count": 11,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.98,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 5,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 11,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.ok.android",
@@ -518,7 +551,7 @@
         "Одноклассники"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T19:09:52.604103+00:00",
+      "last_seen": "2026-10-14T19:32:24.331240+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "play.google.com",
@@ -527,10 +560,13 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 7,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 1,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -549,9 +585,12 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -562,7 +601,7 @@
         "Пятёрочка: доставка продуктов"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T19:09:53.001248+00:00",
+      "last_seen": "2026-10-14T19:32:25.138984+00:00",
       "source_domains": [
         "kod.ru",
         "meduza.io",
@@ -571,12 +610,38 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 6,
+      "evidence_count": 12,
+      "positive_evidence_count": 10,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
+    },
+    {
+      "package_id": "ru.raiffeisennews",
+      "names": [
+        "Райффайзен Онлайн Банк Россия"
+      ],
+      "first_seen": "2026-10-14T19:30:50.817057+00:00",
+      "last_seen": "2026-10-14T19:30:50.817057+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 1,
+      "positive_evidence_count": 1,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.93,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 1,
+      "status": "confirmed",
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.rostel",
@@ -584,7 +649,7 @@
         "Госуслуги"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T19:09:53.137652+00:00",
+      "last_seen": "2026-10-14T19:32:25.674402+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
@@ -595,32 +660,15 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 6,
+      "evidence_count": 9,
+      "positive_evidence_count": 5,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
-    },
-    {
-      "package_id": "ru.rshb.dbo",
-      "names": [
-        "Мобильный банк, Россельхозбанк"
-      ],
-      "first_seen": "2026-10-14T18:42:51.514408+00:00",
-      "last_seen": "2026-10-14T18:43:32.616018+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 2,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
-      "status": "confirmed",
-      "reason": "multiple_store_evidence"
     },
     {
       "package_id": "ru.rtlabs.mobile.ebs.gosuslugi.android",
@@ -636,11 +684,14 @@
         "google_play"
       ],
       "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.822,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.rzd.pass",
@@ -649,7 +700,7 @@
         "РЖД Пассажирам билеты на поезд"
       ],
       "first_seen": "2026-05-18",
-      "last_seen": "2026-10-14T18:43:10.396860+00:00",
+      "last_seen": "2026-10-14T19:32:26.104482+00:00",
       "source_domains": [
         "hi-tech.mail.ru",
         "kod.ru",
@@ -660,10 +711,13 @@
       "stores": [
         "google_play"
       ],
-      "evidence_count": 6,
+      "evidence_count": 10,
+      "positive_evidence_count": 6,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 0,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -682,9 +736,12 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -693,8 +750,8 @@
       "names": [
         "Дешевые авиабилеты онлайн"
       ],
-      "first_seen": "2026-10-14T18:43:10.711205+00:00",
-      "last_seen": "2026-10-14T18:43:33.095145+00:00",
+      "first_seen": "2026-10-14T19:31:21.871954+00:00",
+      "last_seen": "2026-10-14T19:32:26.754959+00:00",
       "source_domains": [
         "play.google.com"
       ],
@@ -702,11 +759,14 @@
         "google_play"
       ],
       "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.822,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 2,
-      "explicit_store_evidence": false,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.uteka.app",
@@ -714,19 +774,22 @@
         "Ютека. Все аптеки города"
       ],
       "first_seen": "2026-10-14T18:42:54.537353+00:00",
-      "last_seen": "2026-10-14T19:09:53.876911+00:00",
+      "last_seen": "2026-10-14T19:32:26.976065+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 4,
+      "evidence_count": 8,
+      "positive_evidence_count": 8,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.96,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 4,
-      "explicit_store_evidence": false,
+      "direct_store_evidence_count": 8,
       "status": "confirmed",
-      "reason": "multiple_store_evidence"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "ru.yandex.taxi",
@@ -740,9 +803,12 @@
       ],
       "stores": [],
       "evidence_count": 1,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -761,9 +827,12 @@
       ],
       "stores": [],
       "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -780,9 +849,12 @@
       ],
       "stores": [],
       "evidence_count": 2,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 0,
+      "positive_confidence": 1.0,
+      "negative_confidence": 0.0,
       "direct_store_evidence": false,
       "direct_store_evidence_count": 0,
-      "explicit_store_evidence": false,
       "status": "confirmed",
       "reason": "seed"
     },
@@ -792,79 +864,22 @@
         "Здравсити – Аптеки с доставкой"
       ],
       "first_seen": "2026-10-14T18:42:55.261718+00:00",
-      "last_seen": "2026-10-14T18:43:33.737266+00:00",
+      "last_seen": "2026-10-14T19:32:28.107498+00:00",
       "source_domains": [
         "play.google.com"
       ],
       "stores": [
         "google_play"
       ],
-      "evidence_count": 2,
+      "evidence_count": 4,
+      "positive_evidence_count": 4,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.995,
+      "negative_confidence": 0.0,
       "direct_store_evidence": true,
-      "direct_store_evidence_count": 2,
-      "explicit_store_evidence": true,
+      "direct_store_evidence_count": 4,
       "status": "confirmed",
-      "reason": "explicit_store_evidence"
-    },
-    {
-      "package_id": "com.kazanexpress.ke_app",
-      "names": [
-        "Магнит Маркет"
-      ],
-      "first_seen": "2026-10-14T18:42:50.902092+00:00",
-      "last_seen": "2026-10-14T18:42:50.902092+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 1,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 1,
-      "explicit_store_evidence": false,
-      "status": "candidate",
-      "reason": "needs_corroboration"
-    },
-    {
-      "package_id": "de.wetteronline.wetterapp",
-      "names": [
-        "Погода & Радар"
-      ],
-      "first_seen": "2026-10-14T18:43:02.388824+00:00",
-      "last_seen": "2026-10-14T18:43:02.388824+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 1,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 1,
-      "explicit_store_evidence": false,
-      "status": "candidate",
-      "reason": "needs_corroboration"
-    },
-    {
-      "package_id": "ru.perekrestok.app",
-      "names": [
-        "Перекресток доставка продуктов"
-      ],
-      "first_seen": "2026-10-14T18:42:53.431728+00:00",
-      "last_seen": "2026-10-14T18:42:53.431728+00:00",
-      "source_domains": [
-        "play.google.com"
-      ],
-      "stores": [
-        "google_play"
-      ],
-      "evidence_count": 1,
-      "direct_store_evidence": true,
-      "direct_store_evidence_count": 1,
-      "explicit_store_evidence": false,
-      "status": "candidate",
-      "reason": "needs_corroboration"
+      "reason": "evidence_confidence"
     },
     {
       "package_id": "team.expero.mobile.pharmacies",
@@ -872,7 +887,260 @@
         "Эксперо: таблетки и витамины"
       ],
       "first_seen": "2026-10-14T18:42:55.509635+00:00",
-      "last_seen": "2026-10-14T18:42:55.509635+00:00",
+      "last_seen": "2026-10-14T19:30:58.142627+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.979,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "confirmed",
+      "reason": "evidence_confidence"
+    },
+    {
+      "package_id": "com.fls.gosuslugispb",
+      "names": [
+        "Госуслуги Санкт-Петербурга"
+      ],
+      "first_seen": "2026-10-14T19:31:02.510537+00:00",
+      "last_seen": "2026-10-14T19:32:16.814897+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 4,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.973,
+      "negative_confidence": 0.969,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 4,
+      "status": "candidate",
+      "reason": "needs_more_confidence"
+    },
+    {
+      "package_id": "ru.mosgorpass",
+      "names": [
+        "Московский транспорт"
+      ],
+      "first_seen": "2026-10-14T18:42:55.635238+00:00",
+      "last_seen": "2026-10-14T19:32:23.862440+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 6,
+      "positive_evidence_count": 5,
+      "negative_evidence_count": 1,
+      "positive_confidence": 0.995,
+      "negative_confidence": 0.97,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 6,
+      "status": "candidate",
+      "reason": "needs_more_confidence"
+    },
+    {
+      "package_id": "ru.perekrestok.app",
+      "names": [
+        "Перекресток доставка продуктов"
+      ],
+      "first_seen": "2026-10-14T18:42:53.431728+00:00",
+      "last_seen": "2026-10-14T19:30:54.615231+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 0,
+      "positive_confidence": 0.792,
+      "negative_confidence": 0.0,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "candidate",
+      "reason": "needs_more_confidence"
+    },
+    {
+      "package_id": "ru.rshb.dbo",
+      "names": [
+        "Мобильный банк, Россельхозбанк"
+      ],
+      "first_seen": "2026-10-14T18:42:51.514408+00:00",
+      "last_seen": "2026-10-14T19:32:25.895594+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 5,
+      "positive_evidence_count": 3,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.996,
+      "negative_confidence": 0.969,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 5,
+      "status": "candidate",
+      "reason": "needs_more_confidence"
+    },
+    {
+      "package_id": "com.accurate.channel.forecast.live.weather",
+      "names": [
+        "Прогноз погоды: точная погода"
+      ],
+      "first_seen": "2026-10-14T19:31:08.901254+00:00",
+      "last_seen": "2026-10-14T19:32:15.886464+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.0,
+      "negative_confidence": 0.991,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "creditapp.onlinecard.miczaim",
+      "names": [
+        "Банк Онлайн: Т кредит и карты"
+      ],
+      "first_seen": "2026-10-14T18:54:41.521781+00:00",
+      "last_seen": "2026-10-14T19:32:18.628883+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 4,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.822,
+      "negative_confidence": 0.947,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 4,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "de.wetteronline.wetterapp",
+      "names": [
+        "Погода & Радар"
+      ],
+      "first_seen": "2026-10-14T19:31:09.497843+00:00",
+      "last_seen": "2026-10-14T19:32:19.295398+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 4,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 4,
+      "positive_confidence": 0.0,
+      "negative_confidence": 0.997,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 4,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "ru.apteka",
+      "names": [
+        "Apteka.ru — заказ лекарств"
+      ],
+      "first_seen": "2026-10-14T19:30:55.901677+00:00",
+      "last_seen": "2026-10-14T19:32:19.955077+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.0,
+      "negative_confidence": 0.947,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "ru.beru.android",
+      "names": [
+        "Яндекс Маркет: онлайн-магазин"
+      ],
+      "first_seen": "2026-10-14T19:30:48.445672+00:00",
+      "last_seen": "2026-10-14T19:32:20.510765+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 2,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.0,
+      "negative_confidence": 0.991,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 2,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "ru.bus62.SmartTransport",
+      "names": [
+        "Умный транспорт"
+      ],
+      "first_seen": "2026-10-14T19:09:00.170439+00:00",
+      "last_seen": "2026-10-14T19:32:21.129272+00:00",
+      "source_domains": [
+        "play.google.com"
+      ],
+      "stores": [
+        "google_play"
+      ],
+      "evidence_count": 4,
+      "positive_evidence_count": 2,
+      "negative_evidence_count": 2,
+      "positive_confidence": 0.822,
+      "negative_confidence": 0.991,
+      "direct_store_evidence": true,
+      "direct_store_evidence_count": 4,
+      "status": "rejected",
+      "reason": "counterevidence"
+    },
+    {
+      "package_id": "ru.lewis.dbo",
+      "names": [
+        "МТС Деньги"
+      ],
+      "first_seen": "2026-10-14T19:30:51.538717+00:00",
+      "last_seen": "2026-10-14T19:30:51.538717+00:00",
       "source_domains": [
         "play.google.com"
       ],
@@ -880,11 +1148,14 @@
         "google_play"
       ],
       "evidence_count": 1,
+      "positive_evidence_count": 0,
+      "negative_evidence_count": 1,
+      "positive_confidence": 0.0,
+      "negative_confidence": 0.86,
       "direct_store_evidence": true,
       "direct_store_evidence_count": 1,
-      "explicit_store_evidence": false,
-      "status": "candidate",
-      "reason": "needs_corroboration"
+      "status": "rejected",
+      "reason": "counterevidence"
     }
   ]
 }

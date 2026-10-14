@@ -1,6 +1,7 @@
 {
-  "updated_at": "2026-10-14T19:22:38.037740+00:00",
-  "confirmed_count": 39,
+  "updated_at": "2026-10-14T19:32:28.370486+00:00",
+  "confirmed_count": 38,
   "candidate_count": 4,
+  "rejected_count": 7,
   "file": "app_ids.txt"
 }
