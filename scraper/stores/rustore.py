@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import deque
 from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 
@@ -35,53 +36,91 @@ class RuStoreParser(StoreParser):
         return StoreMatch(self.store_id, package_id, app_name)
 
     @staticmethod
-    def reviews_url(package_id: str) -> str:
-        return f"https://www.rustore.ru/catalog/app/{package_id}/reviews"
+    def app_url(package_id: str) -> str:
+        return f"https://www.rustore.ru/catalog/app/{package_id}"
 
-    def discover_catalog(self, session: requests.Session, *, max_apps: int = 160) -> dict[str, str]:
-        """Collect package IDs directly from RuStore's public catalogue pages."""
-        urls = [
-            "https://www.rustore.ru/catalog/all",
-            "https://www.rustore.ru/catalog/category/finansy",
-            "https://www.rustore.ru/catalog/category/pokupki",
-            "https://www.rustore.ru/catalog/category/transport-i-navigatsiya",
-            "https://www.rustore.ru/catalog/category/gosudarstvennye",
-            "https://www.rustore.ru/catalog/category/eda-i-napitki",
-            "https://www.rustore.ru/catalog/category/zdorove",
-        ]
+    @classmethod
+    def reviews_url(cls, package_id: str) -> str:
+        return f"{cls.app_url(package_id)}/reviews"
+
+    def _collect_app_links(self, page_url: str, html: str) -> list[tuple[str, str]]:
+        soup = BeautifulSoup(html, "lxml")
+        found: list[tuple[str, str]] = []
+        for a in soup.find_all("a", href=True):
+            href = urljoin(page_url, a["href"])
+            match = self._path_re.search(urlparse(href).path)
+            if not match:
+                continue
+            package_id = match.group(1)
+            title = a.get_text(" ", strip=True) or package_id
+            found.append((package_id, title))
+        return found
+
+    def discover_catalog(
+        self,
+        session: requests.Session,
+        *,
+        max_apps: int = 160,
+        expansion_pages: int = 24,
+    ) -> dict[str, str]:
+        """Collect package IDs from live RuStore pages without hard-coded category slugs.
+
+        RuStore changes category URLs periodically. The stable public entry points are
+        /catalog and /catalog/all, while application URLs are documented as
+        /catalog/app/{packageName}. We crawl those entry points and then a small,
+        bounded number of discovered app pages to pick up related-app links.
+        """
+        queue: deque[str] = deque(
+            [
+                "https://www.rustore.ru/catalog",
+                "https://www.rustore.ru/catalog/all",
+            ]
+        )
+        visited: set[str] = set()
         found: dict[str, str] = {}
-        for url in urls:
-            if len(found) >= max_apps:
-                break
+        expanded_apps = 0
+
+        while queue and len(found) < max_apps:
+            url = queue.popleft()
+            if url in visited:
+                continue
+            visited.add(url)
             try:
-                r = session.get(url, timeout=20)
-                r.raise_for_status()
+                response = session.get(url, timeout=20)
+                response.raise_for_status()
             except Exception as exc:
                 log.warning("RuStore catalogue failed %s: %s", url, exc)
                 continue
-            soup = BeautifulSoup(r.text, "lxml")
-            for a in soup.find_all("a", href=True):
-                href = urljoin(url, a["href"])
-                m = self._path_re.search(urlparse(href).path)
-                if not m:
-                    continue
-                package_id = m.group(1)
-                title = a.get_text(" ", strip=True) or package_id
+
+            for package_id, title in self._collect_app_links(url, response.text):
+                is_new = package_id not in found
                 found.setdefault(package_id, title)
+                if (
+                    is_new
+                    and expanded_apps < expansion_pages
+                    and len(found) < max_apps
+                ):
+                    queue.append(self.app_url(package_id))
+                    expanded_apps += 1
                 if len(found) >= max_apps:
                     break
-        log.info("RuStore catalogue discovery: %d apps", len(found))
+
+        log.info(
+            "RuStore catalogue discovery: %d apps from %d pages",
+            len(found),
+            len(visited),
+        )
         return found
 
     def fetch_reviews_text(self, session: requests.Session, package_id: str) -> tuple[str, str]:
         url = self.reviews_url(package_id)
         try:
-            r = session.get(url, timeout=20)
-            r.raise_for_status()
+            response = session.get(url, timeout=20)
+            response.raise_for_status()
         except Exception as exc:
             log.warning("RuStore reviews failed for %s: %s", package_id, exc)
             return "", url
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(response.text, "lxml")
         return soup.get_text(" ", strip=True), url
 
     def scan_reviews(self, session: requests.Session, *, max_apps: int = 160) -> list[Evidence]:
