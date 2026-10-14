@@ -156,6 +156,21 @@ _WEAK_RULES = [
     _Rule("vpn_problem_en", 0.48, re.compile(r"vpn[^.!?]{0,80}(?:problem|issue|conflict|error)", re.I)),
 ]
 
+# These broad positive patterns are useful when no contradiction is present,
+# but can accidentally span over phrases such as "does not work WITHOUT VPN"
+# and then see a later "with VPN". Strong contextual counterevidence in the
+# same clause suppresses only these ambiguous rules, not explicit detection or
+# explicit demands to disable VPN.
+_AMBIGUOUS_POSITIVE = {"blocked_with_vpn_ru", "blocked_with_vpn_en"}
+_CONTEXTUAL_NEGATIVE = {
+    "requires_vpn_ru",
+    "same_with_without_vpn_ru",
+    "works_with_vpn_ru",
+    "requires_vpn_en",
+    "same_with_without_vpn_en",
+    "works_with_vpn_en",
+}
+
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
@@ -207,15 +222,29 @@ def analyze_text(
     weak: list[tuple[str, float]] = []
 
     for unit in _units(normalized):
+        unit_positive: list[tuple[str, float]] = []
+        unit_negative: list[tuple[str, float]] = []
+        unit_weak: list[tuple[str, float]] = []
+
         for rule in _POSITIVE_RULES:
             if rule.pattern.search(unit):
-                positive.append((rule.name, _adjust(rule.confidence, role, rule.name)))
+                unit_positive.append((rule.name, _adjust(rule.confidence, role, rule.name)))
         for rule in _NEGATIVE_RULES:
             if rule.pattern.search(unit):
-                negative.append((rule.name, _adjust(rule.confidence, role, rule.name)))
+                unit_negative.append((rule.name, _adjust(rule.confidence, role, rule.name)))
         for rule in _WEAK_RULES:
             if rule.pattern.search(unit):
-                weak.append((rule.name, _adjust(rule.confidence, role, rule.name)))
+                unit_weak.append((rule.name, _adjust(rule.confidence, role, rule.name)))
+
+        negative_names = {name for name, _ in unit_negative}
+        if negative_names & _CONTEXTUAL_NEGATIVE:
+            unit_positive = [
+                item for item in unit_positive if item[0] not in _AMBIGUOUS_POSITIVE
+            ]
+
+        positive.extend(unit_positive)
+        negative.extend(unit_negative)
+        weak.extend(unit_weak)
 
     pos_conf = max((value for _, value in positive), default=0.0)
     neg_conf = max((value for _, value in negative), default=0.0)
@@ -243,9 +272,6 @@ def analyze_text(
     if app_is_vpn and not explicit_positive:
         pos_conf = 0.0
 
-    # Counter-evidence wins when it is materially stronger. This catches
-    # "does not work without VPN" and "same with and without VPN" instead of
-    # turning them into false positives merely because both words occur.
     if neg_conf >= 0.72 and neg_conf >= pos_conf + 0.08:
         verdict = "negative"
         confidence = neg_conf
@@ -293,6 +319,9 @@ def combine_classifications(*items: Classification) -> Classification:
     elif uncertain:
         verdict = "uncertain"
         confidence = max(item.confidence for item in uncertain)
+    elif positive or negative:
+        verdict = "uncertain"
+        confidence = max(pos_conf, neg_conf)
     else:
         verdict = "neutral"
         confidence = 0.0
