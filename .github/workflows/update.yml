@@ -53,6 +53,50 @@ jobs:
       - name: Update application list
         run: python -m scraper.main
 
+      - name: Show generated list changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF:refs/remotes/origin/$BASE_REF" --depth=1
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          def ids(raw: str) -> set[str]:
+              return {item.strip() for item in raw.replace("\n", ",").split(",") if item.strip()}
+
+          base_ref = os.environ["BASE_REF"]
+          base_raw = subprocess.check_output(
+              ["git", "show", f"origin/{base_ref}:public/app_ids.txt"],
+              text=True,
+          )
+          current_raw = Path("public/app_ids.txt").read_text(encoding="utf-8")
+          status = json.loads(Path("public/status.json").read_text(encoding="utf-8"))
+          added = sorted(ids(current_raw) - ids(base_raw))
+          removed = sorted(ids(base_raw) - ids(current_raw))
+
+          lines = [
+              "## Generated split-tunnel list",
+              "",
+              f"Confirmed: **{status.get('confirmed_count', 0)}** · "
+              f"Candidates: **{status.get('candidate_count', 0)}** · "
+              f"Rejected: **{status.get('rejected_count', 0)}**",
+              "",
+              f"Added vs `{base_ref}` ({len(added)}): " + (", ".join(f"`{x}`" for x in added) or "none"),
+              "",
+              f"Removed vs `{base_ref}` ({len(removed)}): " + (", ".join(f"`{x}`" for x in removed) or "none"),
+          ]
+          report = "\n".join(lines)
+          print(report)
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as f:
+                  f.write(report + "\n")
+          PY
+
       - name: Commit updates
         if: github.event_name != 'pull_request'
         run: |
