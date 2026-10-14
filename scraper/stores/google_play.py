@@ -72,12 +72,22 @@ class GooglePlayParser(StoreParser):
                     found.setdefault(package_id, row.get("title") or package_id)
         return found
 
-    def scan_reviews(self, queries: list[str], *, per_query: int = 12, review_count: int = 60, max_apps: int = 120) -> list[Evidence]:
+    def scan_reviews(
+        self,
+        queries: list[str],
+        *,
+        per_query: int = 12,
+        review_count: int = 60,
+        max_apps: int = 120,
+        max_evidence_per_app: int = 2,
+    ) -> list[Evidence]:
         from datetime import datetime, timezone
 
         packages = self.discover_packages(queries, per_query=per_query)
         evidence: list[Evidence] = []
+        matched_apps = 0
         for package_id, app_name in list(packages.items())[:max_apps]:
+            app_matches = 0
             for text in self.fetch_recent_reviews(package_id, count=review_count):
                 c = classify(text)
                 if not c.relevant:
@@ -99,6 +109,15 @@ class GooglePlayParser(StoreParser):
                         query="direct_store_scan",
                     )
                 )
-                break
-        log.info("Google Play direct scan: %d apps checked, %d matches", min(len(packages), max_apps), len(evidence))
+                app_matches += 1
+                if app_matches >= max_evidence_per_app:
+                    break
+            if app_matches:
+                matched_apps += 1
+        log.info(
+            "Google Play direct scan: %d apps checked, %d apps matched, %d evidence rows",
+            min(len(packages), max_apps),
+            matched_apps,
+            len(evidence),
+        )
         return evidence
