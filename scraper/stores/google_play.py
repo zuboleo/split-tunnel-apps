@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 import re
 from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..models import SearchHit
+from ..evidence_classifier import classify
+from ..models import Evidence, SearchHit
 from .base import StoreMatch, StoreParser
+
+log = logging.getLogger(__name__)
 
 
 class GooglePlayParser(StoreParser):
@@ -31,12 +35,6 @@ class GooglePlayParser(StoreParser):
         return StoreMatch(self.store_id, package_id, app_name)
 
     def fetch_recent_reviews(self, package_id: str, count: int = 100) -> list[str]:
-        """Optional deep scan. Failure is deliberately non-fatal.
-
-        google-play-scraper uses Google Play's public app surface without an API key.
-        The main pipeline does not depend on it: Bing snippets still work when this
-        endpoint changes.
-        """
         try:
             from google_play_scraper import Sort, reviews
 
@@ -49,5 +47,58 @@ class GooglePlayParser(StoreParser):
                 if joined:
                     texts.append(joined)
             return texts
-        except Exception:
+        except Exception as exc:
+            log.warning("Google Play reviews failed for %s: %s", package_id, exc)
             return []
+
+    def discover_packages(self, queries: list[str], per_query: int = 12) -> dict[str, str]:
+        """Discover apps directly through Google Play search, not web-search snippets."""
+        try:
+            from google_play_scraper import search
+        except Exception as exc:
+            log.warning("Google Play search unavailable: %s", exc)
+            return {}
+
+        found: dict[str, str] = {}
+        for query in queries:
+            try:
+                rows = search(query, lang="ru", country="ru", n_hits=per_query)
+            except Exception as exc:
+                log.warning("Google Play search failed for %r: %s", query, exc)
+                continue
+            for row in rows:
+                package_id = row.get("appId")
+                if package_id:
+                    found.setdefault(package_id, row.get("title") or package_id)
+        return found
+
+    def scan_reviews(self, queries: list[str], *, per_query: int = 12, review_count: int = 60, max_apps: int = 120) -> list[Evidence]:
+        from datetime import datetime, timezone
+
+        packages = self.discover_packages(queries, per_query=per_query)
+        evidence: list[Evidence] = []
+        for package_id, app_name in list(packages.items())[:max_apps]:
+            for text in self.fetch_recent_reviews(package_id, count=review_count):
+                c = classify(text)
+                if not c.relevant:
+                    continue
+                evidence.append(
+                    Evidence(
+                        package_id=package_id,
+                        app_name=app_name,
+                        source_type="store",
+                        source_id="google_play_reviews",
+                        source_domain="play.google.com",
+                        url=f"https://play.google.com/store/apps/details?id={package_id}",
+                        title=app_name,
+                        snippet=text[:1200],
+                        score=c.score,
+                        strong_matches=c.strong_matches,
+                        discovered_at=datetime.now(timezone.utc).isoformat(),
+                        store=self.store_id,
+                        query="direct_store_scan",
+                    )
+                )
+                break
+        log.info("Google Play direct scan: %d apps checked, %d matches", min(len(packages), max_apps), len(evidence))
+        return evidence
