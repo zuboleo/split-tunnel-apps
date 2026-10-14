@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-app-list
+  cancel-in-progress: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
