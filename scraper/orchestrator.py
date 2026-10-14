@@ -15,7 +15,7 @@ from .link_finder import LinkFinder
 from .models import Evidence, SearchHit
 from .normalize import Normalizer
 from .package_resolver import PackageResolver
-from .stores import GooglePlayParser, parser_for_url
+from .stores import GooglePlayParser, RuStoreParser, parser_for_url
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,6 @@ class Orchestrator:
         match = parser.parse_hit(hit)
         if not match.package_id:
             return None
-        # Avoid poisoning the list with actual VPN client apps returned by broad searches.
         title_l = (match.app_name or hit.title).lower()
         if ("vpn" in title_l or "proxy" in title_l) and not any(
             key in classification.strong_matches
@@ -82,7 +81,6 @@ class Orchestrator:
                 names.append(candidate)
 
         evidence: list[Evidence] = []
-        # Known aliases are cheap; for truly new names resolve at most three per article.
         known_names = [name for name in names if self.resolver.known(name)]
         unknown_names = [name for name in names if not self.resolver.known(name)][:3]
         selected_unknown: list[str] = []
@@ -114,11 +112,6 @@ class Orchestrator:
         return evidence
 
     def _deep_google_play_recheck(self, package_ids: list[str], limit_apps: int = 40) -> list[Evidence]:
-        """Check recent Play reviews of already known apps.
-
-        This is intentionally bounded. Discovery remains the primary mechanism;
-        this pass catches fresh review evidence on apps already in the dataset.
-        """
         parser = GooglePlayParser()
         evidence: list[Evidence] = []
         for package_id in package_ids[:limit_apps]:
@@ -144,7 +137,6 @@ class Orchestrator:
                         query="deep_review_recheck",
                     )
                 )
-                # One strong review per app/day is enough; keep evidence compact.
                 break
         return evidence
 
@@ -154,12 +146,9 @@ class Orchestrator:
         new_evidence: list[Evidence] = []
 
         if not offline:
-            # Resolving arbitrary new names requires extra store searches; cap it
-            # globally so a noisy article cannot turn one daily run into hundreds
-            # of requests. Eight names = at most 32 resolver queries.
             self._dynamic_resolves_left = 8
             hits = self.finder.discover(max_queries=max_queries)
-            article_budget = 25  # prevent one daily run from exploding into hundreds of resolver searches
+            article_budget = 25
             article_count = 0
             for hit in hits:
                 store_ev = self._evidence_from_store_hit(hit)
@@ -172,8 +161,16 @@ class Orchestrator:
                 new_evidence.extend(self._evidence_from_article_hit(hit, allow_resolver_search=True))
 
             if deep_store:
+                store_queries = [
+                    "магазин", "банк", "доставка", "аптека", "транспорт",
+                    "госуслуги", "маркет", "такси", "погода", "кино",
+                    "работа", "жкх", "билеты", "еда", "здоровье",
+                ]
+                new_evidence.extend(GooglePlayParser().scan_reviews(store_queries, per_query=10, review_count=60, max_apps=120))
+                new_evidence.extend(RuStoreParser().scan_reviews(self.session, max_apps=160))
+
                 known_ids = sorted(set(seed) | {e.package_id for e in new_evidence if e.package_id})
-                new_evidence.extend(self._deep_google_play_recheck(known_ids))
+                new_evidence.extend(self._deep_google_play_recheck(known_ids, limit_apps=120))
 
         evidence_rows = merge_evidence(evidence_path, new_evidence)
         self.resolver.save()
