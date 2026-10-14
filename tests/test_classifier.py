@@ -27,6 +27,28 @@ def test_same_failure_with_and_without_vpn_is_counterevidence() -> None:
     assert c.verdict == "negative"
 
 
+def test_shazam_style_same_with_or_without_vpn_is_negative() -> None:
+    c = analyze_text('Не работает от слова "вообще", с впн или без не имеет значения.')
+    assert c.verdict == "negative"
+    assert "same_with_without_vpn_ru" in c.negative_matches
+    assert not c.relevant
+
+
+def test_youtube_style_vpn_helps_is_negative() -> None:
+    c = analyze_text(
+        "ютуб ограничили, но впн поможет, разработчики стараются сделать чтобы ютуб без впн работал"
+    )
+    assert c.verdict == "negative"
+    assert "vpn_helps_ru" in c.negative_matches
+    assert not c.relevant
+
+
+def test_preposition_must_be_a_word_not_a_letter_inside_word() -> None:
+    c = analyze_text("ограниченной части но впн поможет")
+    assert "blocked_with_vpn_ru" not in c.strong_matches
+    assert c.verdict == "negative"
+
+
 def test_with_vpn_failure_is_positive() -> None:
     c = analyze_text("Приложение не работает с VPN")
     assert c.relevant
