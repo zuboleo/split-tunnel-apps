@@ -22,8 +22,9 @@ def _rx(pattern: str) -> re.Pattern[str]:
     return re.compile(pattern, re.I)
 
 
-# Positive means the application rejects/detects VPN or requires it to be
-# disabled. Patterns deliberately describe a relation, not mere co-occurrence.
+# Positive means the application rejects/detects VPN or otherwise fails because
+# VPN is active. One explicit observation may be enough; mere VPN co-occurrence
+# is never enough.
 _POSITIVE_RULES = [
     _Rule(
         "false_vpn_detection_ru",
@@ -56,21 +57,32 @@ _POSITIVE_RULES = [
         ),
     ),
     _Rule(
+        "vpn_allergy_ru",
+        0.91,
+        _rx(
+            rf"(?:(?:приложени[еяю]|сервис|прога|приложуха)[^.!?]{{0,60}}(?:аллерги|не\s+любит|не\s+дружит)"
+            rf"[^.!?]{{0,35}}\b{_VPN}\b|(?:аллерги|не\s+любит|не\s+дружит)[^.!?]{{0,35}}\b{_VPN}\b)"
+        ),
+    ),
+    _Rule(
         "blocked_with_vpn_ru",
         0.92,
         _rx(
             rf"(?:\b(?:с|при|через)\b[^.!?]{{0,20}}\b{_VPN}\b[^.!?]{{0,100}}"
-            rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|блокир|огранич|ошибк)|"
-            rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|блокир|огранич)"
-            rf"[^.!?]{{0,100}}\b(?:с|при|через)\b[^.!?]{{0,20}}\b{_VPN}\b)"
+            rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|"
+            rf"(?:выда[её]т|пишет|показывает)\s+ошибк|доступ\s+(?:закрыт|ограничен)|блокируется)|"
+            rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|"
+            rf"доступ\s+(?:закрыт|ограничен)|блокируется)[^.!?]{{0,100}}"
+            rf"\b(?:с|при|через)\b[^.!?]{{0,20}}\b{_VPN}\b)"
         ),
     ),
     _Rule(
         "vpn_blocks_access_ru",
         0.93,
         _rx(
-            rf"\b{_VPN}\b[^.!?]{{0,100}}"
-            rf"(?:блокир|огранич|не\s+да[её]т\s+(?:войти|зайти|открыть)|не\s+пускает|мешает\s+вход)"
+            rf"\b{_VPN}\b[^.!?]{{0,75}}(?:"
+            rf"не\s+да[её]т\s+(?:войти|зайти|открыть|работать)|не\s+пускает|мешает\s+(?:входу|работе)|"
+            rf"блокирует\s+(?:доступ|вход|работу)|ограничивает\s+(?:доступ|вход|работу))"
         ),
     ),
     _Rule(
@@ -110,6 +122,11 @@ _POSITIVE_RULES = [
             r"(?:\bwith\b|\bwhen\s+using\b)[^.!?]{0,25}\bvpn\b)"
         ),
     ),
+    _Rule(
+        "vpn_blocks_access_en",
+        0.93,
+        _rx(r"\bvpn\b[^.!?]{0,75}(?:blocks?\s+(?:access|login)|prevents?\s+(?:login|access)|breaks?\s+the\s+app)"),
+    ),
     _Rule("disable_vpn_en", 0.66, _rx(r"(?:disable|turn\s+off)[^.!?]{0,40}\bvpn\b")),
 ]
 
@@ -121,8 +138,13 @@ _NEGATIVE_RULES = [
         "requires_vpn_ru",
         0.97,
         _rx(
-            rf"(?:(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится))"
+            rf"(?:(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает))"
             rf"[^.!?]{{0,80}}\bбез\b[^.!?]{{0,20}}\b{_VPN}\b|"
+            rf"\bбез\b[^.!?]{{0,20}}\b{_VPN}\b[^.!?]{{0,45}}"
+            rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает|зайд[её]шь|войд[её]шь)|"
+            rf"(?:не\s+)?зайд[её]шь|(?:не\s+)?войд[её]шь)|"
+            rf"\b{_VPN}\b[^.!?]{{0,90}}\bбез\s+него\b[^.!?]{{0,45}}"
+            rf"не\s+(?:работает|открывается|заходит|входит|грузится)|"
             rf"(?:работает|открывается|заходит|входит)[^.!?]{{0,50}}\bтолько\b[^.!?]{{0,20}}"
             rf"\b(?:с|через)\b[^.!?]{{0,15}}\b{_VPN}\b)"
         ),
@@ -154,17 +176,33 @@ _NEGATIVE_RULES = [
         ),
     ),
     _Rule(
-        "without_vpn_is_goal_ru",
+        "vpn_does_not_fix_ru",
         0.90,
         _rx(
-            rf"(?:чтобы|хочу|хотел(?:ось)?)[^.!?]{{0,80}}\bбез\b[^.!?]{{0,15}}\b{_VPN}\b"
-            rf"[^.!?]{{0,45}}(?:работал|работало|открывал|заходил|грузил)"
+            rf"(?:\bс\b\s*\b{_VPN}\b[^.!?]{{0,30}}(?:тоже|так\s+же)[^.!?]{{0,25}}"
+            rf"(?:не\s+работает|не\s+открывается|глючит|ошибк|через\s+раз)|"
+            rf"\b{_VPN}\b[^.!?]{{0,20}}(?:не\s+помогает|не\s+помог|не\s+спасает))"
+        ),
+    ),
+    _Rule(
+        "without_vpn_is_goal_ru",
+        0.92,
+        _rx(
+            rf"(?:(?:чтобы|хочу|хотел(?:ось)?|сделайте)[^.!?]{{0,80}}"
+            rf"(?:работал[оа]?|открывал(?:ось|ся)?|заходил[оа]?|грузил(?:ось|ся)?)"
+            rf"[^.!?]{{0,45}}\bбез\b[^.!?]{{0,15}}\b{_VPN}\b|"
+            rf"(?:чтобы|хочу|хотел(?:ось)?|сделайте)[^.!?]{{0,80}}\bбез\b[^.!?]{{0,15}}\b{_VPN}\b"
+            rf"[^.!?]{{0,45}}(?:работал|работало|открывал|заходил|грузил))"
         ),
     ),
     _Rule(
         "requires_vpn_en",
         0.97,
-        _rx(r"(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)[^.!?]{0,80}\bwithout\s+vpn\b"),
+        _rx(
+            r"(?:(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)[^.!?]{0,80}\bwithout\s+vpn\b|"
+            r"\bwithout\s+vpn\b[^.!?]{0,55}(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)|"
+            r"(?:works?|opens?|logs?\s+in|loads?)[^.!?]{0,45}\bonly\b[^.!?]{0,20}\bwith\s+vpn\b)"
+        ),
     ),
     _Rule(
         "same_with_without_vpn_en",
@@ -185,6 +223,11 @@ _NEGATIVE_RULES = [
         0.90,
         _rx(r"(?:\bwith\b|\bthrough\b)[^.!?]{0,20}\bvpn\b[^.!?]{0,60}(?:works?|opens?|logs?\s+in|loads?)"),
     ),
+    _Rule(
+        "vpn_does_not_fix_en",
+        0.90,
+        _rx(r"(?:with\s+vpn[^.!?]{0,30}(?:also|still)[^.!?]{0,30}(?:fails?|doesn't\s+work|broken)|vpn[^.!?]{0,25}(?:doesn't\s+help|does\s+not\s+help))"),
+    ),
 ]
 
 _WEAK_RULES = [
@@ -192,7 +235,7 @@ _WEAK_RULES = [
     _Rule("vpn_problem_en", 0.48, _rx(r"\bvpn\b[^.!?]{0,80}(?:problem|issue|conflict|error)")),
 ]
 
-_AMBIGUOUS_POSITIVE = {"blocked_with_vpn_ru", "blocked_with_vpn_en"}
+_AMBIGUOUS_POSITIVE = {"blocked_with_vpn_ru", "blocked_with_vpn_en", "vpn_blocks_access_ru", "vpn_blocks_access_en"}
 _CONTEXTUAL_NEGATIVE = {rule.name for rule in _NEGATIVE_RULES}
 
 
@@ -261,8 +304,9 @@ def analyze_text(
             if rule.pattern.search(unit)
         ]
 
-        # A broad "fails ... with VPN" pattern must not beat an explicit local
-        # statement saying VPN helps, is required, or makes no difference.
+        # Broad relation patterns must not beat an explicit local statement that
+        # VPN helps, is required, or makes no difference. Explicit detection and
+        # explicit "turn VPN off" rules remain and can make the result uncertain.
         if {name for name, _ in unit_negative} & _CONTEXTUAL_NEGATIVE:
             unit_positive = [item for item in unit_positive if item[0] not in _AMBIGUOUS_POSITIVE]
 
@@ -279,12 +323,14 @@ def analyze_text(
         "false_vpn_detection_ru",
         "requires_disable_vpn_ru",
         "vpn_detected_ru",
+        "vpn_allergy_ru",
         "blocked_with_vpn_ru",
         "vpn_blocks_access_ru",
         "false_vpn_detection_en",
         "requires_disable_vpn_en",
         "vpn_detected_en",
         "blocked_with_vpn_en",
+        "vpn_blocks_access_en",
     }
     if app_is_vpn and not any(name in explicit_positive_names for name, _ in positive):
         pos_conf = 0.0
