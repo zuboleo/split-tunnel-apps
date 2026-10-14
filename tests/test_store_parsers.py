@@ -9,6 +9,19 @@ def hit(url: str) -> SearchHit:
     return SearchHit("test", "q", "App", url, "отключите VPN")
 
 
+class FakeSearch:
+    def search(self, query: str, limit: int = 10):
+        return [
+            SearchHit(
+                "test",
+                query,
+                "32 отзыва о приложении Desport: интернет-магазин в RuStore",
+                "https://www.rustore.ru/catalog/app/ru.desport.android/reviews",
+                "Приложение не работает. Требует отключить VPN, но он у меня не включен.",
+            )
+        ]
+
+
 def test_google_play_id() -> None:
     p = GooglePlayParser()
     assert p.parse_hit(hit("https://play.google.com/store/apps/details?id=ru.dns.shop.android")).package_id == "ru.dns.shop.android"
@@ -26,6 +39,15 @@ def test_rustore_catalog_link_extraction() -> None:
         '<a href="/catalog/app/ru.example.app">Example App</a>',
     )
     assert rows == [("ru.example.app", "Example App")]
+
+
+def test_rustore_indexed_review_scan_finds_explicit_block() -> None:
+    evidence = RuStoreParser().scan_indexed_reviews(FakeSearch(), limit_per_phrase=1)
+    assert evidence
+    item = evidence[0]
+    assert item.package_id == "ru.desport.android"
+    assert item.verdict == "positive"
+    assert item.confidence >= 0.9
 
 
 def test_samsung_id() -> None:
