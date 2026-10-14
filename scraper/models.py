@@ -20,6 +20,9 @@ class Classification:
     score: int
     strong_matches: list[str] = field(default_factory=list)
     weak_matches: list[str] = field(default_factory=list)
+    verdict: str = "neutral"
+    confidence: float = 0.0
+    negative_matches: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -48,6 +51,9 @@ class Evidence:
     published_at: str | None = None
     store: str | None = None
     query: str | None = None
+    verdict: str = "positive"
+    confidence: float = 0.0
+    negative_matches: list[str] = field(default_factory=list)
 
     @property
     def fingerprint(self) -> str:
@@ -60,6 +66,7 @@ class Evidence:
                 self.url,
                 self.title,
                 self.snippet,
+                self.verdict,
             ]
         )
         return sha256(payload.encode("utf-8", errors="ignore")).hexdigest()
