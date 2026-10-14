@@ -49,9 +49,9 @@ def merge_evidence(path: Path, new_items: list[Evidence]) -> list[dict]:
     by_fp = {row.get("fingerprint"): row for row in existing if row.get("fingerprint")}
     for item in new_items:
         row = item.to_dict()
-        fp = row["fingerprint"]
-        if fp not in by_fp:
-            by_fp[fp] = row
+        # New schema-aware observations replace an older row with the same
+        # stable fingerprint, upgrading it with verdict/confidence fields.
+        by_fp[row["fingerprint"]] = row
     rows = list(by_fp.values())
     rows.sort(key=lambda x: (x.get("discovered_at", ""), x.get("package_id") or "", x.get("url") or ""))
     save_json(path, rows)
