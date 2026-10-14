@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
 
 from .article_parser import ArticleParser
 from .seed import load_seed
@@ -37,17 +36,36 @@ class Orchestrator:
         )
         self._dynamic_resolves_left = 0
 
-    def _evidence_from_store_hit(self, hit: SearchHit) -> Evidence | None:
+    def _parse_store_hit(self, hit: SearchHit):
         parser = parser_for_url(hit.url)
         if not parser:
-            return None
+            return None, None
+
+        match = parser.parse_hit(hit)
+        if match.package_id:
+            return parser, match
+
+        # Samsung/Huawei search results can expose a store-specific app ID in
+        # the URL while the Android package name lives in embedded page JSON.
+        # Fetch the page only when URL/snippet parsing was insufficient.
+        try:
+            response = self.session.get(hit.url, timeout=15)
+            response.raise_for_status()
+            match = parser.parse_hit(hit, response.text)
+        except Exception as exc:
+            log.debug("Store page metadata fetch failed for %s: %s", hit.url, exc)
+        return parser, match
+
+    def _evidence_from_store_hit(self, hit: SearchHit) -> Evidence | None:
         combined = " ".join(x for x in (hit.title, hit.snippet) if x)
         classification = classify(combined)
         if not classification.relevant:
             return None
-        match = parser.parse_hit(hit)
-        if not match.package_id:
+
+        parser, match = self._parse_store_hit(hit)
+        if not parser or not match or not match.package_id:
             return None
+
         title_l = (match.app_name or hit.title).lower()
         if ("vpn" in title_l or "proxy" in title_l) and not any(
             key in classification.strong_matches
@@ -111,10 +129,16 @@ class Orchestrator:
             )
         return evidence
 
-    def _deep_google_play_recheck(self, package_ids: list[str], limit_apps: int = 40) -> list[Evidence]:
+    def _deep_google_play_recheck(
+        self,
+        package_ids: list[str],
+        limit_apps: int = 40,
+        max_evidence_per_app: int = 2,
+    ) -> list[Evidence]:
         parser = GooglePlayParser()
         evidence: list[Evidence] = []
         for package_id in package_ids[:limit_apps]:
+            app_matches = 0
             for text in parser.fetch_recent_reviews(package_id, count=50):
                 c = classify(text)
                 if not c.relevant:
@@ -137,7 +161,9 @@ class Orchestrator:
                         query="deep_review_recheck",
                     )
                 )
-                break
+                app_matches += 1
+                if app_matches >= max_evidence_per_app:
+                    break
         return evidence
 
     def run(self, *, offline: bool = False, max_queries: int | None = None, deep_store: bool = True) -> dict:
@@ -166,11 +192,25 @@ class Orchestrator:
                     "госуслуги", "маркет", "такси", "погода", "кино",
                     "работа", "жкх", "билеты", "еда", "здоровье",
                 ]
-                new_evidence.extend(GooglePlayParser().scan_reviews(store_queries, per_query=10, review_count=60, max_apps=120))
-                new_evidence.extend(RuStoreParser().scan_reviews(self.session, max_apps=160))
+                new_evidence.extend(
+                    GooglePlayParser().scan_reviews(
+                        store_queries,
+                        per_query=10,
+                        review_count=60,
+                        max_apps=120,
+                        max_evidence_per_app=2,
+                    )
+                )
+                new_evidence.extend(RuStoreParser().scan_reviews(self.session, max_apps=120))
 
                 known_ids = sorted(set(seed) | {e.package_id for e in new_evidence if e.package_id})
-                new_evidence.extend(self._deep_google_play_recheck(known_ids, limit_apps=120))
+                new_evidence.extend(
+                    self._deep_google_play_recheck(
+                        known_ids,
+                        limit_apps=120,
+                        max_evidence_per_app=2,
+                    )
+                )
 
         evidence_rows = merge_evidence(evidence_path, new_evidence)
         self.resolver.save()
