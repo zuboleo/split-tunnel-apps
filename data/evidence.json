@@ -1010,5 +1010,351 @@
     "store": "google_play",
     "query": "deep_review_recheck",
     "fingerprint": "6a5ba674dca110e953883affa09eec36ed5deec09bb988b8e79f9797e76d40e2"
+  },
+  {
+    "package_id": "ru.uteka.app",
+    "app_name": "Ютека. Все аптеки города",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.uteka.app",
+    "title": "Ютека. Все аптеки города",
+    "snippet": "Очень долго проводятся техработы ! Добрый день! Приложение может зависать из-за ограничений интернета со стороны оператора связи. Рекомендуем переключиться на wi-fi и отключить vpn. Если проблема сохраняется, напишите, пожалуйста, нам на почту help@uteka.ru. Отправьте снимок экрана или видео с возникшей проблемой. Также может понадобиться модель телефона и версия приложения.",
+    "score": 4,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:08:58.850408+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "75cd2763d4f921abe67aeabd24b3f6880f4fa2a440e490f53b3a7766470b0c13"
+  },
+  {
+    "package_id": "ru.mosgorpass",
+    "app_name": "Московский транспорт",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.mosgorpass",
+    "title": "Московский транспорт",
+    "snippet": "приложение уже несколько дней не работает, запускается только с ВПН и сразу сообщает что нет сети интернет Добрый день!\nПриносим извинения за доставленные неудобства! Данный вопрос находится в проработке специалистов.",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:08:59.899303+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "7287dc0412feae362273c2bf83bf17e4bb1925ab090af0183f25e9bed4e32be5"
+  },
+  {
+    "package_id": "ru.bus62.SmartTransport",
+    "app_name": "Умный транспорт",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.bus62.SmartTransport",
+    "title": "Умный транспорт",
+    "snippet": "не работает нормально, заметил когда впн работает он нормально работает",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:00.170439+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "61eda51aff629e3bc3f9c4b134dc3c375f7e66a00a1b8df91dd5007e5e15e0d1"
+  },
+  {
+    "package_id": "ru.gosuslugi.school",
+    "app_name": "Госуслуги Моя школа",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.gosuslugi.school",
+    "title": "Госуслуги Моя школа",
+    "snippet": "добрый вечер, почему не могу обновить приложение не впускает в приложение Это может быть вызвано медленным или нестабильным интернетом. Попробуйте сменить точку доступа: мобильный интернет на wi-fi или наоборот. Отключите VPN-клиент, если вы его используете. Если рекомендации не помогают, обратитесь в службу поддержки через веб-версию портала, вкладка Помощь → Другие способы связи",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:01.307976+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "0254e0f8141b2bd2ff35a69e5ae87225960d50d8cce0286d6f4cbe16c5578728"
+  },
+  {
+    "package_id": "com.fls.gosuslugispb",
+    "app_name": "Госуслуги Санкт-Петербурга",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=com.fls.gosuslugispb",
+    "title": "Госуслуги Санкт-Петербурга",
+    "snippet": "Не открывается даже при выключенном vpn. Раньше хотя бы работало, но функционал был бедный",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:02.002127+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "756114a071fa3c2ab23270b97a9dd46cba625e73130e3477f5c2bf6141708282"
+  },
+  {
+    "package_id": "ru.aliexpress.buyer",
+    "app_name": "AliExpress - ваш маркетплейс",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.aliexpress.buyer",
+    "title": "AliExpress - ваш маркетплейс",
+    "snippet": "при белых списках не работает, зато ВПН блокирует как пользоваться - непонятно. удаляю Добрый день! Если проблема сохранится после переустановки приложения, то воспользуйтесь, пожалуйста, нашим сайтом https://aliexpress.ru/. Сложности подключения приложения могут быть из-за работы интернета его качества\\ограничения в вашем регионе. Со своей стороны мы можем рекомендовать подключаться к сетям wifi.",
+    "score": 6,
+    "strong_matches": [
+      "not_work_with_vpn_ru",
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:02.872607+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "e0c1db69cce464f327863f0b13ce9b5b80bcc082d660f160526526ec23b3e0b8"
+  },
+  {
+    "package_id": "ru.aviasales",
+    "app_name": "Авиасейлс — авиабилеты дешево",
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.aviasales",
+    "title": "Авиасейлс — авиабилеты дешево",
+    "snippet": "Приложение хорошее, проработано, и в правду поможет найти билеты в любую точку мира. Но последнее время не загружается приложение вообще. Поставлю 5 звёзд, если будет исправно Upd. Снова все работает Попробуйте сменить мобильный интернет на вайфай или наоборот, отключить VPN и перезапустить устройство. Если не поможет, дайте нам немного времени: сейчас чиним приложение после массовых сбоев, которые могли затронуть и вас. Если спустя время ничего не изменится, напишите нам в личку любой удобной соцсети. Посмотрим, в чём дело 💙",
+    "score": 4,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:11.569307+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "direct_store_scan",
+    "fingerprint": "c076e2c37260d28a0fb97d49780e4603a840d77b66d6f309b159c6144d333e5d"
+  },
+  {
+    "package_id": "com.fls.gosuslugispb",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=com.fls.gosuslugispb",
+    "title": "com.fls.gosuslugispb",
+    "snippet": "Не открывается даже при выключенном vpn. Раньше хотя бы работало, но функционал был бедный",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:49.396603+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "c11553d9c202100554380f4195809d73c1ec4fa1f58394ecbbfe05af858da3f4"
+  },
+  {
+    "package_id": "com.vkontakte.android",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=com.vkontakte.android",
+    "title": "com.vkontakte.android",
+    "snippet": "После обновления ВК требует отключить впн... пожалуй отключу ВК. Александр, позвольте вместе с вами в этом разобраться. Подключение через VPN может ограничивать работу некоторых сервисов. Для стабильной работы приложения советуем отключить VPN.",
+    "score": 7,
+    "strong_matches": [
+      "disable_vpn_ru",
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:49.663954+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "5757a1ef1a2a4039f509a3c736d0bfa375ac95c41ad66a318d0e751f1a2e07d7"
+  },
+  {
+    "package_id": "ru.aliexpress.buyer",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.aliexpress.buyer",
+    "title": "ru.aliexpress.buyer",
+    "snippet": "при белых списках не работает, зато ВПН блокирует как пользоваться - непонятно. удаляю Добрый день! Если проблема сохранится после переустановки приложения, то воспользуйтесь, пожалуйста, нашим сайтом https://aliexpress.ru/. Сложности подключения приложения могут быть из-за работы интернета его качества\\ограничения в вашем регионе. Со своей стороны мы можем рекомендовать подключаться к сетям wifi.",
+    "score": 6,
+    "strong_matches": [
+      "not_work_with_vpn_ru",
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:50.599579+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "fe0b4c250a8370462d38a4596f33d1608814c1d917cd3533622f09d09b3bda38"
+  },
+  {
+    "package_id": "ru.aviasales",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.aviasales",
+    "title": "ru.aviasales",
+    "snippet": "Приложение хорошее, проработано, и в правду поможет найти билеты в любую точку мира. Но последнее время не загружается приложение вообще. Поставлю 5 звёзд, если будет исправно Upd. Снова все работает Попробуйте сменить мобильный интернет на вайфай или наоборот, отключить VPN и перезапустить устройство. Если не поможет, дайте нам немного времени: сейчас чиним приложение после массовых сбоев, которые могли затронуть и вас. Если спустя время ничего не изменится, напишите нам в личку любой удобной соцсети. Посмотрим, в чём дело 💙",
+    "score": 4,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:50.751314+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "4f8b60144c1f4fd892b0c7c5e7944d76bd8327921504cd20d38caf13403ffb77"
+  },
+  {
+    "package_id": "ru.bus62.SmartTransport",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.bus62.SmartTransport",
+    "title": "ru.bus62.SmartTransport",
+    "snippet": "не работает нормально, заметил когда впн работает он нормально работает",
+    "score": 3,
+    "strong_matches": [
+      "not_work_with_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:50.981092+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "10161f2d8243ecac5d934377d4d460eeb880e0413e17d4fe51ff02157fdd5bfb"
+  },
+  {
+    "package_id": "ru.gosuslugi.school",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.gosuslugi.school",
+    "title": "ru.gosuslugi.school",
+    "snippet": "добрый вечер, почему не могу обновить приложение не впускает в приложение Это может быть вызвано медленным или нестабильным интернетом. Попробуйте сменить точку доступа: мобильный интернет на wi-fi или наоборот. Отключите VPN-клиент, если вы его используете. Если рекомендации не помогают, обратитесь в службу поддержки через веб-версию портала, вкладка Помощь → Другие способы связи",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:51.593785+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "131daea9a5ebd20a0f55d256f3839f0a974646e84df27c4c96e3a423e6e500fc"
+  },
+  {
+    "package_id": "ru.mts.mtstv",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.mts.mtstv",
+    "title": "ru.mts.mtstv",
+    "snippet": "приложение постоянно виснет, чего не происходит с другими подобными приложениями.Обновить не получается. Александр, спасибо за отзыв. Мы понимаем, насколько это может быть неприятно. Попробуйте следующее:\n1. Отключите VPN\n2. Измерьте скорость интернета на любом сайте проверки скорости.Нужно минимум 1 Мбит/с\n3. Удалите и переустановите КИОН с l.mts.ru/kionmb\n4. Перезагрузите устройство.Если не помогло, напишите нам на app@kion.ru укажите номер телефона",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:52.454702+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "6f8082ea411a0e5db1b9c24ca53abcc3190af4e59864dc9dcca7c710a1881946"
+  },
+  {
+    "package_id": "ru.ok.android",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.ok.android",
+    "title": "ru.ok.android",
+    "snippet": "не открывается,совсем. Для решения сложностей, убедитесь, что у вас установлена последняя версия приложения, а ОС Android не ниже 7.0. Перезапустите приложение, очистите его кэш, проверьте работу с Wi-Fi и с мобильным интернетом, отключите VPN и перезагрузите устройство. Если не помогло – загляните в раздел Помощь или обратитесь в Поддержку по ссылке: https://ok.ru/help.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:52.604103+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "9e1b045bb401dd37ade0b7116887ef3f4f04a3375441d0b5d0f976bd8b174dcc"
+  },
+  {
+    "package_id": "ru.pyaterochka.app.browser",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.pyaterochka.app.browser",
+    "title": "ru.pyaterochka.app.browser",
+    "snippet": "приложение перестало работать нормально!!! при попытке доставки адрес не фиксируется, выходит ошибка сервера...поддержка тупит, неделю уже не могут решить... безобразие полное!!! Гульфиназ, пожалуйста, очистите cache и cookie приложения в настройках смартфона, отключите VPN, проверьте работу интернета и обновите приложение до последней версии. Если это не поможет, напишите в группу «Пятёрочка. Поддержка» (https://vk.com/pyaterochka_help). Мы уточним у вас детали о вашем гаджете и обязательно во всём разберёмся.",
+    "score": 3,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:53.001248+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "21b5a3d924cbc6464b19cf61947689ed4dc912e1a453388af63feadd7b943579"
+  },
+  {
+    "package_id": "ru.rostel",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.rostel",
+    "title": "ru.rostel",
+    "snippet": "заходит долго бесполезное приложение Рекомендуем отключить в телефоне функцию \"Частный DNS-сервер\" и в настройках мобильного браузера разрешить использовать JavaScript. Необходимо отключить VPN и блокировщики контента, используйте стабильное Интернет-соединение. При сохранении затруднения обратитесь в службу поддержки через веб-версию портала, вкладка \"Помощь\" → \"Другие способы связи\"",
+    "score": 7,
+    "strong_matches": [
+      "disable_vpn_ru",
+      "vpn_blocks_access_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:53.137652+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "7b28cd7e30c189af6ad13a76c321c89c6c985f6149dcf41ddb61b42ec93abfea"
+  },
+  {
+    "package_id": "ru.uteka.app",
+    "app_name": null,
+    "source_type": "store",
+    "source_id": "google_play_reviews",
+    "source_domain": "play.google.com",
+    "url": "https://play.google.com/store/apps/details?id=ru.uteka.app",
+    "title": "ru.uteka.app",
+    "snippet": "Очень долго проводятся техработы ! Добрый день! Приложение может зависать из-за ограничений интернета со стороны оператора связи. Рекомендуем переключиться на wi-fi и отключить vpn. Если проблема сохраняется, напишите, пожалуйста, нам на почту help@uteka.ru. Отправьте снимок экрана или видео с возникшей проблемой. Также может понадобиться модель телефона и версия приложения.",
+    "score": 4,
+    "strong_matches": [
+      "disable_vpn_ru"
+    ],
+    "discovered_at": "2026-10-14T19:09:53.876911+00:00",
+    "published_at": null,
+    "store": "google_play",
+    "query": "deep_review_recheck",
+    "fingerprint": "c376ce96ef0a2e530f8fc182a0a27f9008d389626bf5b1edfeccfabe86c903a3"
   }
 ]
