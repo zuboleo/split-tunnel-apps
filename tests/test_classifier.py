@@ -1,28 +1,63 @@
 from scraper.evidence_classifier import classify
+from scraper.evidence_engine import analyze_review, analyze_text
 
 
 def test_strong_russian_detection() -> None:
-    c = classify("Приложение сообщает: отключите VPN, чтобы продолжить")
+    c = classify("Приложение сообщает: отключить VPN, чтобы продолжить")
     assert c.relevant
-    assert c.score >= 3
+    assert c.verdict == "positive"
+    assert c.confidence >= 0.9
 
 
 def test_generic_vpn_mention_is_not_enough() -> None:
     c = classify("VPN помогает защищать ваш интернет")
     assert not c.relevant
+    assert c.verdict == "neutral"
 
 
-def test_without_vpn_is_not_block_evidence() -> None:
-    c = classify("Приложение не работает без VPN, а с VPN открывается нормально")
+def test_without_vpn_is_counterevidence() -> None:
+    c = analyze_text("Приложение не работает без VPN, а с VPN открывается нормально")
     assert not c.relevant
+    assert c.verdict == "negative"
+    assert c.confidence >= 0.9
 
 
-def test_same_failure_with_and_without_vpn_is_not_block_evidence() -> None:
-    c = classify("Приложение не открывается: что с ВПН, что без него")
-    assert not c.relevant
+def test_same_failure_with_and_without_vpn_is_counterevidence() -> None:
+    c = analyze_text("Приложение не открывается: что с ВПН, что без него")
+    assert c.verdict == "negative"
 
 
-def test_with_vpn_failure_is_still_relevant() -> None:
-    c = classify("Приложение не работает с VPN")
+def test_with_vpn_failure_is_positive() -> None:
+    c = analyze_text("Приложение не работает с VPN")
     assert c.relevant
-    assert "not_work_with_vpn_ru" in c.strong_matches
+    assert c.verdict == "positive"
+    assert "blocked_with_vpn_ru" in c.strong_matches
+
+
+def test_false_vpn_detection_is_very_strong() -> None:
+    c = analyze_text("Приложение требует отключить VPN, но он у меня не включен")
+    assert c.verdict == "positive"
+    assert c.confidence >= 0.95
+    assert "false_vpn_detection_ru" in c.strong_matches
+
+
+def test_rustore_style_false_detection_text() -> None:
+    c = analyze_text("Не работает!!! Требует отключить VPN, но он у меня не включен!!!!")
+    assert c.verdict == "positive"
+    assert c.confidence >= 0.95
+
+
+def test_developer_disable_vpn_boilerplate_is_only_moderate() -> None:
+    c = analyze_review(
+        "Не открывается приложение",
+        "Пожалуйста, отключите VPN, очистите кэш и перезагрузите телефон",
+        app_name="Example",
+    )
+    assert c.verdict == "positive"
+    assert 0.5 <= c.confidence < 0.7
+
+
+def test_vpn_app_review_is_not_mistaken_for_blocking() -> None:
+    c = analyze_text("VPN не работает после обновления", app_name="VPN ЕНОТ")
+    assert c.verdict in {"neutral", "uncertain"}
+    assert not c.relevant
