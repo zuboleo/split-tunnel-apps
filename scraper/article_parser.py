@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import re
-from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
-from .evidence_classifier import classify
+from .evidence_engine import analyze_text
 from .models import ParsedDocument, SearchHit
 from .normalize import Normalizer
 
@@ -29,7 +28,6 @@ def _clean_candidate(value: str) -> str:
 
 def _extract_candidate_names(text: str, title: str) -> list[str]:
     candidates: list[str] = []
-    # Title is often the app name for store pages or single-app articles.
     title_part = re.split(r"[|—–:]", title, maxsplit=1)[0].strip()
     if 2 <= len(title_part) <= 60:
         candidates.append(title_part)
@@ -56,7 +54,7 @@ def _extract_candidate_names(text: str, title: str) -> list[str]:
 
 
 class ArticleParser:
-    """Parser #2: fetches discovered URLs and extracts evidence/app names."""
+    """Fetch discovered pages and route their text through the shared engine."""
 
     def __init__(self, session: requests.Session, normalizer: Normalizer):
         self.session = session
@@ -78,11 +76,10 @@ class ArticleParser:
             main = soup.find("article") or soup.find("main") or soup.body or soup
             page_text = main.get_text(" ", strip=True)
         except Exception:
-            # Search snippet itself can be enough (especially for indexed reviews).
             page_text = ""
 
         combined = " ".join(part for part in (title, hit.snippet, page_text) if part)
-        classification = classify(combined)
+        classification = analyze_text(combined, role="article", app_name=title)
         known_apps = [app.canonical for app in self.normalizer.match_all(combined)]
         candidates = _extract_candidate_names(combined, title)
 

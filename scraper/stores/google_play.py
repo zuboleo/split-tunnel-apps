@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..evidence_classifier import classify
+from ..evidence_engine import analyze_review
 from ..models import Evidence, SearchHit
 from .base import StoreMatch, StoreParser
 
@@ -34,25 +35,30 @@ class GooglePlayParser(StoreParser):
                 package_id = match.group(1) if match else None
         return StoreMatch(self.store_id, package_id, app_name)
 
-    def fetch_recent_reviews(self, package_id: str, count: int = 100) -> list[str]:
+    def fetch_recent_reviews(self, package_id: str, count: int = 100) -> list[tuple[str, str]]:
+        """Return user review and developer reply separately.
+
+        Keeping the roles separate is important: a generic developer reply like
+        "try disabling VPN" is useful evidence, but much weaker than a user
+        reporting that the app itself says VPN is forbidden.
+        """
         try:
             from google_play_scraper import Sort, reviews
 
             rows, _ = reviews(package_id, lang="ru", country="ru", sort=Sort.NEWEST, count=count)
-            texts: list[str] = []
+            result: list[tuple[str, str]] = []
             for row in rows:
                 content = (row.get("content") or "").strip()
                 reply = (row.get("replyContent") or "").strip()
-                joined = " ".join(x for x in (content, reply) if x)
-                if joined:
-                    texts.append(joined)
-            return texts
+                if content or reply:
+                    result.append((content, reply))
+            return result
         except Exception as exc:
             log.warning("Google Play reviews failed for %s: %s", package_id, exc)
             return []
 
     def discover_packages(self, queries: list[str], per_query: int = 12) -> dict[str, str]:
-        """Discover apps directly through Google Play search, not web-search snippets."""
+        """Discover apps directly through Google Play search, not web snippets."""
         try:
             from google_play_scraper import search
         except Exception as exc:
@@ -79,19 +85,26 @@ class GooglePlayParser(StoreParser):
         per_query: int = 12,
         review_count: int = 60,
         max_apps: int = 120,
-        max_evidence_per_app: int = 2,
+        max_evidence_per_app: int = 3,
     ) -> list[Evidence]:
-        from datetime import datetime, timezone
-
         packages = self.discover_packages(queries, per_query=per_query)
         evidence: list[Evidence] = []
         matched_apps = 0
+
         for package_id, app_name in list(packages.items())[:max_apps]:
             app_matches = 0
-            for text in self.fetch_recent_reviews(package_id, count=review_count):
-                c = classify(text)
-                if not c.relevant:
+            for review_text, developer_reply in self.fetch_recent_reviews(package_id, count=review_count):
+                classification = analyze_review(
+                    review_text,
+                    developer_reply,
+                    app_name=app_name,
+                )
+                if classification.verdict not in {"positive", "negative"}:
                     continue
+
+                snippet = review_text.strip()
+                if developer_reply:
+                    snippet = f"{snippet}\nDeveloper reply: {developer_reply}".strip()
                 evidence.append(
                     Evidence(
                         package_id=package_id,
@@ -101,21 +114,26 @@ class GooglePlayParser(StoreParser):
                         source_domain="play.google.com",
                         url=f"https://play.google.com/store/apps/details?id={package_id}",
                         title=app_name,
-                        snippet=text[:1200],
-                        score=c.score,
-                        strong_matches=c.strong_matches,
+                        snippet=snippet[:1200],
+                        score=classification.score,
+                        strong_matches=classification.strong_matches,
                         discovered_at=datetime.now(timezone.utc).isoformat(),
                         store=self.store_id,
                         query="direct_store_scan",
+                        verdict=classification.verdict,
+                        confidence=classification.confidence,
+                        negative_matches=classification.negative_matches,
                     )
                 )
                 app_matches += 1
                 if app_matches >= max_evidence_per_app:
                     break
+
             if app_matches:
                 matched_apps += 1
+
         log.info(
-            "Google Play direct scan: %d apps checked, %d apps matched, %d evidence rows",
+            "Google Play direct scan: %d apps checked, %d apps with VPN evidence, %d evidence rows",
             min(len(packages), max_apps),
             matched_apps,
             len(evidence),
