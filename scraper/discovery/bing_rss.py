@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import base64
 from email.utils import parsedate_to_datetime
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, unquote, urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
@@ -41,8 +42,6 @@ class BingRssSearch:
             response = self.session.get(target, timeout=20, allow_redirects=False)
 
         if response.status_code in {301, 302, 303, 307, 308}:
-            # Last-resort canonical request with an explicit country instead of
-            # following another geo host.
             fallback = dict(params)
             fallback["cc"] = "ru"
             fallback["mkt"] = "en-US"
@@ -52,6 +51,55 @@ class BingRssSearch:
         if response.status_code in {301, 302, 303, 307, 308}:
             raise RuntimeError(f"Bing RSS redirect loop: {response.status_code} {response.headers.get('Location')}")
         return response
+
+    @staticmethod
+    def _decode_tracking_url(raw_url: str) -> str:
+        """Return the real result URL from Bing web/news tracking wrappers.
+
+        Web results commonly use /ck/a with a URL-safe base64 destination in
+        the `u=a1...` parameter. News RSS uses /news/apiclick.aspx with a normal
+        percent-encoded `url=` destination. Keeping the wrapper here breaks
+        source allowlisting and can also hit Bing's regional TLS redirects.
+        """
+        if not raw_url:
+            return raw_url
+        try:
+            parsed = urlparse(raw_url)
+        except ValueError:
+            return raw_url
+
+        host = (parsed.hostname or "").lower()
+        if not (host == "bing.com" or host.endswith(".bing.com")):
+            return raw_url
+
+        params = parse_qs(parsed.query)
+
+        if parsed.path.lower() == "/ck/a":
+            values = params.get("u") or []
+            if values:
+                value = values[0]
+                payload = value[2:] if value.startswith("a1") else value
+                try:
+                    payload += "=" * (-len(payload) % 4)
+                    decoded = base64.urlsafe_b64decode(payload).decode("utf-8")
+                    target = urlparse(decoded)
+                    if target.scheme in {"http", "https"} and target.hostname:
+                        return decoded
+                except (ValueError, UnicodeDecodeError):
+                    pass
+
+        if parsed.path.lower().endswith("/news/apiclick.aspx"):
+            values = params.get("url") or []
+            if values:
+                decoded = unquote(values[0])
+                try:
+                    target = urlparse(decoded)
+                except ValueError:
+                    target = None
+                if target and target.scheme in {"http", "https"} and target.hostname:
+                    return decoded
+
+        return raw_url
 
     def search(self, query: str, limit: int = 10, news: bool = False) -> list[SearchHit]:
         self.delay.wait()
@@ -68,7 +116,8 @@ class BingRssSearch:
         hits: list[SearchHit] = []
         for item in root.findall(".//item"):
             title = (item.findtext("title") or "").strip()
-            url = (item.findtext("link") or "").strip()
+            raw_url = (item.findtext("link") or "").strip()
+            url = cls._decode_tracking_url(raw_url)
             snippet = (item.findtext("description") or "").strip()
             pub_raw = (item.findtext("pubDate") or "").strip()
             published_at = None
