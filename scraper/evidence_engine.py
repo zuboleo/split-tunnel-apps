@@ -132,7 +132,8 @@ _POSITIVE_RULES = [
 
 
 # Negative means the text argues against "this app blocks VPN": VPN is needed,
-# helps, works fine, or makes no difference. This is first-class evidence.
+# helps app access, works fine, or makes no difference. Generic claims about
+# privacy/security benefits of VPN remain neutral.
 _NEGATIVE_RULES = [
     _Rule(
         "requires_vpn_ru",
@@ -163,8 +164,12 @@ _NEGATIVE_RULES = [
         "vpn_helps_ru",
         0.97,
         _rx(
-            rf"(?:\b{_VPN}\b[^.!?]{{0,40}}(?:поможет|помогает|спасает|выручает|нужен|нужна|необходим)|"
-            rf"(?:поможет|помогает|спасает|выручает|нужен|нужна|необходим)[^.!?]{{0,40}}\b{_VPN}\b)"
+            rf"(?:(?:не\s+(?:работает|открывается|заходит|входит|грузится)|блокир\w*|огранич\w*)"
+            rf"[^.!?]{{0,90}}\b{_VPN}\b[^.!?]{{0,25}}(?:поможет|помогает|спасает|выручает)|"
+            rf"\b{_VPN}\b[^.!?]{{0,25}}(?:поможет|помогает|спасает|выручает)"
+            rf"[^.!?]{{0,65}}(?:зайти|войти|открыть|загрузить|работать|получить\s+доступ|разблокировать|обойти\s+огранич)|"
+            rf"(?:нужен|нужна|необходим)[^.!?]{{0,25}}\b{_VPN}\b[^.!?]{{0,55}}(?:для|чтобы)"
+            rf"[^.!?]{{0,35}}(?:вход|доступ|работ|открыт|загруз))"
         ),
     ),
     _Rule(
@@ -216,7 +221,11 @@ _NEGATIVE_RULES = [
     _Rule(
         "vpn_helps_en",
         0.97,
-        _rx(r"(?:\bvpn\b[^.!?]{0,40}(?:helps?|needed|required|fixes)|(?:helps?|needed|required)[^.!?]{0,40}\bvpn\b)"),
+        _rx(
+            r"(?:(?:doesn't\s+work|does\s+not\s+work|won't\s+open|blocked|restricted)[^.!?]{0,90}\bvpn\b[^.!?]{0,25}(?:helps?|fixes?)|"
+            r"\bvpn\b[^.!?]{0,25}(?:helps?|fixes?)[^.!?]{0,65}(?:work|open|login|load|access|unblock)|"
+            r"(?:needed|required)[^.!?]{0,25}\bvpn\b[^.!?]{0,55}(?:to|for)[^.!?]{0,30}(?:work|open|login|access))"
+        ),
     ),
     _Rule(
         "works_with_vpn_en",
