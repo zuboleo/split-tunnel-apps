@@ -7,6 +7,18 @@ from pathlib import Path
 from .models import Evidence
 
 
+# A single store review is enough only when it explicitly says that VPN was
+# detected/blocked. Generic troubleshooting advice such as "disable VPN" stays
+# a candidate until it is corroborated by another independent observation.
+EXPLICIT_BLOCK_MATCHES = {
+    "vpn_detected_ru",
+    "detected_vpn_ru",
+    "vpn_blocks_access_ru",
+    "access_blocked_vpn_ru",
+    "vpn_detected_en",
+}
+
+
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -48,6 +60,13 @@ def load_id_set(path: Path) -> set[str]:
     return {x.strip() for x in raw.replace("\n", ",").split(",") if x.strip() and not x.strip().startswith("#")}
 
 
+def _is_explicit_store_evidence(row: dict) -> bool:
+    if row.get("source_type") != "store" or int(row.get("score") or 0) < 3:
+        return False
+    strong = set(row.get("strong_matches") or [])
+    return bool(strong & EXPLICIT_BLOCK_MATCHES) or len(strong) >= 2
+
+
 def build_apps(
     evidence_rows: list[dict],
     seed: dict[str, dict],
@@ -70,8 +89,11 @@ def build_apps(
             "stores": [],
             "evidence_count": int(seed_item.get("evidence_count", 1)),
             "direct_store_evidence": False,
+            "direct_store_evidence_count": 0,
+            "explicit_store_evidence": False,
             "status": "confirmed",
             "reason": "seed",
+            "_store_evidence_fingerprints": set(),
         }
 
     for row in evidence_rows:
@@ -89,8 +111,11 @@ def build_apps(
                 "stores": [],
                 "evidence_count": 0,
                 "direct_store_evidence": False,
+                "direct_store_evidence_count": 0,
+                "explicit_store_evidence": False,
                 "status": "candidate",
                 "reason": "single_source",
+                "_store_evidence_fingerprints": set(),
             },
         )
         if row.get("app_name"):
@@ -101,24 +126,36 @@ def build_apps(
             item["stores"] = sorted(set(item["stores"]) | {row["store"]})
         item["evidence_count"] += 1
         item["last_seen"] = max(item.get("last_seen") or "", row.get("discovered_at") or "")
+
         if row.get("source_type") == "store" and int(row.get("score") or 0) >= 3:
             item["direct_store_evidence"] = True
+            fingerprint = row.get("fingerprint") or "|".join(
+                str(row.get(key) or "") for key in ("source_id", "url", "snippet", "discovered_at")
+            )
+            item["_store_evidence_fingerprints"].add(fingerprint)
+            if _is_explicit_store_evidence(row):
+                item["explicit_store_evidence"] = True
 
     for package_id, item in apps.items():
+        item["direct_store_evidence_count"] = len(item.pop("_store_evidence_fingerprints", set()))
+
         if package_id in allowlist:
             item["status"] = "confirmed"
             item["reason"] = "allowlist"
         elif item.get("status") == "confirmed":
             pass
-        elif item.get("direct_store_evidence"):
+        elif item.get("explicit_store_evidence"):
             item["status"] = "confirmed"
-            item["reason"] = "direct_store_evidence"
+            item["reason"] = "explicit_store_evidence"
+        elif item.get("direct_store_evidence_count", 0) >= 2:
+            item["status"] = "confirmed"
+            item["reason"] = "multiple_store_evidence"
         elif len(set(item.get("source_domains", []))) >= 2:
             item["status"] = "confirmed"
             item["reason"] = "two_independent_domains"
         else:
             item["status"] = "candidate"
-            item["reason"] = "single_source"
+            item["reason"] = "needs_corroboration"
 
     ordered = sorted(apps.values(), key=lambda x: (x["status"] != "confirmed", x["package_id"]))
     return {"updated_at": now, "apps": ordered}
