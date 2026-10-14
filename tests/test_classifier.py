@@ -100,6 +100,13 @@ def test_rustore_style_false_detection_text() -> None:
     assert c.confidence >= 0.95
 
 
+def test_explicit_app_message_disable_vpn_is_strong() -> None:
+    c = analyze_text("Приложение не работает за границей. Пишет выключите впн. Бред просто.")
+    assert c.verdict == "positive"
+    assert c.confidence >= 0.9
+    assert "requires_disable_vpn_ru" in c.strong_matches
+
+
 def test_developer_disable_vpn_boilerplate_is_only_moderate() -> None:
     c = analyze_review(
         "Не открывается приложение",
