@@ -183,15 +183,29 @@ class Orchestrator:
             hits = self.finder.discover(max_queries=max_queries)
             article_budget = 25
             article_count = 0
+            skipped_unknown = 0
             for hit in hits:
-                store_ev = self._evidence_from_store_hit(hit)
-                if store_ev:
-                    new_evidence.append(store_ev)
+                # A store URL belongs to its store adapter even when its search
+                # snippet is neutral. Do not fall through and parse a store page
+                # as a news article.
+                if parser_for_url(hit.url):
+                    store_ev = self._evidence_from_store_hit(hit)
+                    if store_ev:
+                        new_evidence.append(store_ev)
+                    continue
+
+                # Generic search can return arbitrary unrelated websites. Only
+                # configured editorial/community sources are fetched as articles.
+                if not self.finder.is_article_source(hit.url):
+                    skipped_unknown += 1
                     continue
                 if article_count >= article_budget:
                     continue
                 article_count += 1
                 new_evidence.extend(self._evidence_from_article_hit(hit, allow_resolver_search=True))
+
+            if skipped_unknown:
+                log.info("Discovery routing: skipped %d unconfigured URLs", skipped_unknown)
 
             if deep_store:
                 store_queries = [
