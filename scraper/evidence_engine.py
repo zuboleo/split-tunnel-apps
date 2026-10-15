@@ -21,6 +21,7 @@ _HARD_PUNCT = {".", "!", "?", ";"}
 
 _WORK_LEMMAS = {
     "работать",
+    "заработать",
     "открываться",
     "открывать",
     "открыть",
@@ -83,6 +84,7 @@ _ACCESS_LEMMAS = {
 }
 _GOAL_WORDS = {"чтобы", "хотеть", "сделать", "просить"}
 _OFF_WORDS = {"выключенный", "отключенный", "неактивный"}
+_ACTIVE_WORDS = {"включённый", "включенный", "активный", "подключённый", "подключенный"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +92,7 @@ class _Token:
     text: str
     lower: str
     lemma: str
+    pos: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,20 +105,22 @@ class _Relation:
 
 
 @lru_cache(maxsize=8192)
-def _lemma(word: str) -> str:
+def _morph(word: str) -> tuple[str, str | None]:
     if not re.fullmatch(r"[а-яё]+", word, re.I):
-        return word.lower()
+        return word.lower(), None
     try:
-        return _MORPH.parse(word.lower())[0].normal_form
+        parsed = _MORPH.parse(word.lower())[0]
+        return parsed.normal_form, parsed.tag.POS
     except Exception:
-        return word.lower()
+        return word.lower(), None
 
 
 def _tokens(text: str) -> list[_Token]:
     result: list[_Token] = []
     for item in tokenize(text):
         lower = item.text.lower()
-        result.append(_Token(item.text, lower, _lemma(lower)))
+        lemma, pos = _morph(lower)
+        result.append(_Token(item.text, lower, lemma, pos))
     return result
 
 
@@ -165,18 +170,34 @@ def _condition(tokens: list[_Token], anchor: int) -> str:
     before = tokens[max(0, anchor - 4):anchor]
     before_lemmas = [token.lemma for token in before]
 
-    # Verb operators are more specific than a nearby preposition.
-    for i in _near(_DISABLE_LEMMAS, tokens, anchor, 5):
-        if not _is_negated(tokens, i):
-            return "DISABLE_VPN"
-    for i in _near(_ENABLE_LEMMAS, tokens, anchor, 5):
-        if not _is_negated(tokens, i):
-            return "ENABLE_VPN"
-
+    # Explicit prepositions closest to VPN are the clearest condition markers.
     if "без" in before_lemmas[-3:]:
         return "WITHOUT_VPN"
-    if any(value in before_lemmas[-3:] for value in {"с", "через", "при"}):
+    if any(value in before_lemmas[-3:] for value in {"с", "через"}):
         return "WITH_VPN"
+
+    # "при включенном VPN" describes VPN state, not an instruction to enable it.
+    if "при" in before_lemmas[-3:]:
+        if any(token.lemma in _DISABLE_LEMMAS or token.lemma in _OFF_WORDS for token in before):
+            return "WITHOUT_VPN"
+        return "WITH_VPN"
+
+    # Participles also describe state: "VPN включен/отключен".
+    for token in before:
+        if token.pos == "PRTF" or token.lemma in _ACTIVE_WORDS | _OFF_WORDS:
+            if token.lemma in _DISABLE_LEMMAS or token.lemma in _OFF_WORDS:
+                return "WITHOUT_VPN"
+            if token.lemma in _ENABLE_LEMMAS or token.lemma in _ACTIVE_WORDS:
+                return "WITH_VPN"
+
+    # Actual verb operators: "включил VPN", "выключите VPN".
+    for i in _near(_DISABLE_LEMMAS, tokens, anchor, 5):
+        if tokens[i].pos != "PRTF" and not _is_negated(tokens, i):
+            return "DISABLE_VPN"
+    for i in _near(_ENABLE_LEMMAS, tokens, anchor, 5):
+        if tokens[i].pos != "PRTF" and not _is_negated(tokens, i):
+            return "ENABLE_VPN"
+
     return "VPN"
 
 
@@ -215,6 +236,7 @@ def _same_with_without_vpn(text: str) -> bool:
         rf"с\s+{alias}\s+(?:или|и|/)\s+без(?:\s+(?:него|{alias}))?[^.!?]{{0,40}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)",
         rf"(?:не\s+работает|не\s+открывается|глючит)[^.!?]{{0,45}}с\s+{alias}[^.!?]{{0,35}}(?:и|или|что)\s+без",
         rf"(?:с|через)\s+{alias}[^.!?]{{0,20}}(?:тоже|так\s+же)[^.!?]{{0,20}}(?:не\s+работает|не\s+открывается|не\s+грузится|глючит|через\s+раз|ошибк)",
+        rf"без\s+{alias}[^.!?]{{0,35}}(?:не\s+работает|не\s+открывается|не\s+грузится|ошибк)[^.!?]{{0,35}}(?:и|а)\s+(?:с|через)\s+{alias}[^.!?]{{0,25}}(?:тоже|так\s+же)?[^.!?]{{0,20}}(?:не\s+работает|не\s+открывается|не\s+грузится|ошибк)",
     )
     return any(re.search(pattern, text, re.I) for pattern in patterns)
 
@@ -297,7 +319,10 @@ def _relation_for_anchor(
         add("direct", 0.99, "DISABLE_VPN", "FALSE_DETECTION", "false_vpn_detection")
 
     disable_indexes = _near(_DISABLE_LEMMAS, clause, local_anchor, 5)
-    if disable_indexes and any(not _is_negated(clause, i) for i in disable_indexes):
+    if disable_indexes and any(
+        clause[i].pos != "PRTF" and not _is_negated(clause, i)
+        for i in disable_indexes
+    ):
         explicit = _contains(clause, _REQUIRE_LEMMAS) or _contains(clause, _ACCESS_LEMMAS)
         add(
             "direct",
@@ -315,9 +340,9 @@ def _relation_for_anchor(
         add("direct", 0.91, "WITH_VPN", "NOT_WORKING", "vpn_allergy")
 
     if effect == "NOT_WORKING":
-        if condition == "WITH_VPN":
-            add("direct", 0.94, condition, effect, "fails_with_vpn")
-        elif condition == "WITHOUT_VPN":
+        if condition in {"WITH_VPN", "ENABLE_VPN"}:
+            add("direct", 0.95 if condition == "ENABLE_VPN" else 0.94, condition, effect, "fails_with_vpn")
+        elif condition in {"WITHOUT_VPN", "DISABLE_VPN"}:
             add("proxy", 0.97, condition, effect, "fails_without_vpn")
     elif effect == "WORKING":
         if condition == "WITH_VPN":
@@ -329,19 +354,23 @@ def _relation_for_anchor(
                 effect,
                 "works_only_with_vpn" if confidence > 0.9 else "works_with_vpn",
             )
+        elif condition == "ENABLE_VPN":
+            add("proxy", 0.96, condition, effect, "works_after_enabling_vpn")
+        elif condition == "DISABLE_VPN":
+            add("direct", 0.96, condition, effect, "works_after_disabling_vpn")
         elif condition == "WITHOUT_VPN" and _contains_goal(clause):
             # "сделайте, чтобы работало без VPN" describes the desired state,
             # so it is evidence that VPN is currently required.
             add("proxy", 0.94, condition, "CURRENTLY_REQUIRES_VPN", "goal_work_without_vpn")
 
-    if condition == "ENABLE_VPN":
-        if effect in {"WORKING", None} or _contains(clause, _REQUIRE_LEMMAS | _ACCESS_LEMMAS):
-            add("proxy", 0.94, condition, effect or "REQUIRED", "enable_vpn")
+    if condition == "ENABLE_VPN" and effect is None:
+        if _contains(clause, _REQUIRE_LEMMAS | _ACCESS_LEMMAS):
+            add("proxy", 0.94, condition, "REQUIRED", "enable_vpn")
 
     if _near(_BLOCK_LEMMAS, clause, local_anchor, 7):
-        if condition in {"WITH_VPN", "VPN"}:
+        if condition in {"WITH_VPN", "VPN", "ENABLE_VPN"}:
             add("direct", 0.94, condition, "BLOCKED", "vpn_blocks_access")
-        elif condition == "WITHOUT_VPN":
+        elif condition in {"WITHOUT_VPN", "DISABLE_VPN"}:
             add("proxy", 0.93, condition, "BLOCKED", "blocked_without_vpn")
 
     if _near(_HELP_LEMMAS, clause, local_anchor, 6) and _problem_context(clause, app_name):
@@ -350,7 +379,10 @@ def _relation_for_anchor(
         add("proxy", 0.92, "VPN", "HELPS", "vpn_helps_access")
 
     if _contains(clause, _REQUIRE_LEMMAS) and _contains(clause, _ACCESS_LEMMAS):
-        disable_near = any(not _is_negated(clause, i) for i in disable_indexes)
+        disable_near = any(
+            clause[i].pos != "PRTF" and not _is_negated(clause, i)
+            for i in disable_indexes
+        )
         if not disable_near:
             add("proxy", 0.95, "VPN", "REQUIRED", "vpn_required")
 
