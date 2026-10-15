@@ -185,17 +185,12 @@ class Orchestrator:
             article_count = 0
             skipped_unknown = 0
             for hit in hits:
-                # A store URL belongs to its store adapter even when its search
-                # snippet is neutral. Do not fall through and parse a store page
-                # as a news article.
                 if parser_for_url(hit.url):
                     store_ev = self._evidence_from_store_hit(hit)
                     if store_ev:
                         new_evidence.append(store_ev)
                     continue
 
-                # Generic search can return arbitrary unrelated websites. Only
-                # configured editorial/community sources are fetched as articles.
                 if not self.finder.is_article_source(hit.url):
                     skipped_unknown += 1
                     continue
@@ -225,8 +220,6 @@ class Orchestrator:
                     )
                 )
 
-                # Priority IDs are only candidates for a live RuStore recheck.
-                # They do not become confirmed merely by being watchlisted.
                 rustore_watchlist = load_id_set(self.data / "rustore_watchlist.txt")
                 rustore_priority = sorted(set(seed) | rustore_watchlist)
                 new_evidence.extend(
@@ -253,8 +246,15 @@ class Orchestrator:
         self.resolver.save()
 
         allowlist = load_id_set(self.data / "allowlist.txt")
+        proxy_allowlist = load_id_set(self.data / "proxy_allowlist.txt")
         denylist = load_id_set(self.data / "denylist.txt")
-        dataset = build_apps(evidence_rows, seed, allowlist, denylist)
+        dataset = build_apps(
+            evidence_rows,
+            seed,
+            allowlist,
+            denylist,
+            proxy_allowlist=proxy_allowlist,
+        )
         save_json(self.data / "apps.json", dataset)
         write_outputs(
             dataset,
