@@ -18,33 +18,18 @@ PUBLIC = ROOT / "public"
 DIRECT_FILE = PUBLIC / "direct_apps.txt"
 PROXY_FILE = PUBLIC / "proxy_apps.txt"
 
-# Tiny manual safety net for routes that were verified independently of noisy
-# store reviews. This is code/config, not persisted evidence. Everything else
-# must be rediscovered and justified by the current run.
 VERIFIED_DIRECT = {"ru.dns.shop.android"}
 VERIFIED_PROXY = {"com.google.android.youtube"}
 
 APP_QUERIES = [
-    "банк",
-    "магазин",
-    "маркетплейс",
-    "доставка",
-    "еда",
-    "такси",
-    "транспорт",
-    "билеты",
-    "путешествия",
-    "кино",
-    "видео",
-    "музыка",
-    "соцсеть",
-    "мессенджер",
-    "госуслуги",
-    "жкх",
-    "здоровье",
-    "аптека",
-    "погода",
-    "работа",
+    "банк", "магазин", "маркетплейс", "доставка", "еда", "такси",
+    "транспорт", "билеты", "путешествия", "кино", "видео", "музыка",
+    "соцсеть", "мессенджер", "госуслуги", "жкх", "здоровье", "аптека",
+    "погода", "работа",
+    "social media", "messenger", "chat", "video", "video streaming",
+    "music", "music streaming", "short video", "photo", "entertainment",
+    "browser", "travel", "maps", "shopping", "food delivery", "taxi",
+    "weather", "jobs", "banking",
 ]
 
 MAX_REPORTS_PER_SOURCE = 16
@@ -61,12 +46,6 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class ReviewReport:
-    """One independent store review and its developer reply.
-
-    Only extracted VPN sentences are kept. The full review never leaves the
-    current process and is never persisted.
-    """
-
     source: str
     review: tuple[str, ...]
     developer_reply: tuple[str, ...]
@@ -198,7 +177,7 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
     session.headers.update({"User-Agent": "split-tunnel-apps/1.0"})
 
     google = GooglePlayParser()
-    google_packages = google.discover_packages(APP_QUERIES, per_query=10, max_apps=160)
+    google_packages = google.discover_packages(APP_QUERIES, per_query=16, max_apps=320)
     for package_id in priority:
         google_packages.setdefault(package_id, package_id)
     names.update(google_packages)
@@ -214,7 +193,7 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
         session,
         APP_QUERIES,
         priority=priority,
-        max_apps=220,
+        max_apps=260,
     )
     for package_id, app_name in rustore_packages.items():
         if app_name and app_name != package_id:
@@ -237,6 +216,28 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
     return names, reports
 
 
+def route_from_labels(labels: dict[str, str]) -> str:
+    values = list(labels.values())
+    direct_strong = values.count("DIRECT_STRONG")
+    proxy_strong = values.count("PROXY_STRONG")
+    direct = direct_strong + values.count("DIRECT")
+    proxy = proxy_strong + values.count("PROXY")
+
+    # Any meaningful evidence in both directions is a conflict. Do not try to
+    # average it into a route.
+    if direct and proxy:
+        return "SKIP"
+    if direct_strong:
+        return "DIRECT"
+    if proxy_strong:
+        return "PROXY"
+    if direct >= 2:
+        return "DIRECT"
+    if proxy >= 2:
+        return "PROXY"
+    return "SKIP"
+
+
 def classify_reports(
     classifier: DeepSeekClassifier,
     names: dict[str, str],
@@ -247,19 +248,18 @@ def classify_reports(
     skipped = 0
 
     for package_id, app_reports in sorted(reports.items()):
-        # Manually verified routes do not need to spend a model request and
-        # cannot be knocked out by a random fresh review.
         if package_id in VERIFIED_DIRECT or package_id in VERIFIED_PROXY:
             continue
 
         payload = [report.as_payload(f"r{index}") for index, report in enumerate(app_reports, start=1)]
         try:
-            route = classifier.classify(package_id, names.get(package_id), payload)
+            labels = classifier.classify_reports(package_id, names.get(package_id), payload)
         except Exception as exc:
             raise RuntimeError(
                 f"Classification failed for {package_id}; refusing to overwrite public lists"
             ) from exc
 
+        route = route_from_labels(labels)
         if route == "DIRECT":
             direct.add(package_id)
         elif route == "PROXY":
@@ -286,8 +286,6 @@ def run() -> tuple[set[str], set[str]]:
     if not direct and not proxy:
         raise RuntimeError("No publishable routes found; refusing to overwrite public lists")
 
-    # Public lists are rebuilt from the current model result plus the tiny
-    # independently verified safety net. Old model decisions are not durable.
     _write_ids(DIRECT_FILE, direct)
     _write_ids(PROXY_FILE, proxy)
     log.info(
