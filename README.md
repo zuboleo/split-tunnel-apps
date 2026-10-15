@@ -42,8 +42,8 @@ https://raw.githubusercontent.com/zuboleo/split-tunnel-apps/main/public/direct_a
 Ядро ищет упоминания `VPN`, `ВПН` и `КВН`, рассматривает локальную фразу вокруг них и различает противоположные конструкции, например:
 
 ```text
-не работает без VPN  -> PROXY
-не работает с VPN    -> DIRECT
+не работает без VPN   -> PROXY
+не работает с VPN     -> DIRECT
 требует отключить VPN -> DIRECT
 VPN помогает войти    -> PROXY
 ```
@@ -58,6 +58,7 @@ VPN помогает войти    -> PROXY
 - `data/evidence.json` — найденные свидетельства и их классификация.
 - `data/seed.json` — исходный проверенный DIRECT-набор.
 - `data/allowlist.txt` — принудительное включение в DIRECT.
+- `data/proxy_allowlist.txt` — принудительное включение в PROXY для проверенных исключений из автоматической классификации.
 - `data/denylist.txt` — исключение приложения из результатов.
 - `public/status.json` — состояние последнего обновления.
 
