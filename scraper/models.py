@@ -23,6 +23,9 @@ class Classification:
     verdict: str = "neutral"
     confidence: float = 0.0
     negative_matches: list[str] = field(default_factory=list)
+    route: str = "neutral"
+    condition: str | None = None
+    effect: str | None = None
 
 
 @dataclass(slots=True)
@@ -54,12 +57,12 @@ class Evidence:
     verdict: str = "positive"
     confidence: float = 0.0
     negative_matches: list[str] = field(default_factory=list)
+    route: str | None = None
+    condition: str | None = None
+    effect: str | None = None
 
     @property
     def fingerprint(self) -> str:
-        # Keep this payload backward-compatible with evidence generated before
-        # verdict/confidence were added. Re-scanning the same observation can
-        # therefore upgrade the old row instead of creating a duplicate.
         payload = "\n".join(
             [
                 self.package_id or "",
