@@ -1,1 +1,1 @@
-com.accurate.channel.forecast.live.weather,com.discord,com.imo.android.imoim,com.kakao.talk,com.soundcloud.android,com.starmakerinteractive.starmaker,com.tipsytavern.app,com.turkcell.bip,com.zhiliaoapp.musically,de.wetteronline.wetterapp,kallossoft.avatar,org.thoughtcrime.securesms,ru.bus62.SmartTransport
+com.discord,com.google.android.youtube,com.imo.android.imoim,com.lemon.lvoverseas,com.soundcloud.android,com.tipsytavern.app,com.turkcell.bip,de.wetteronline.wetterapp,kallossoft.avatar,ru.bus62.SmartTransport
