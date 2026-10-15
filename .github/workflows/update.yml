@@ -59,12 +59,51 @@ jobs:
       - name: Commit updates
         if: github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/direct_apps.txt public/proxy_apps.txt
-          if git diff --staged --quiet; then
-            echo "No changes"
-            exit 0
-          fi
-          git commit -m "chore: update app lists $(date -u +%F)"
-          git push
+
+          # Preserve the freshly generated result before syncing with main.
+          cp public/direct_apps.txt /tmp/direct_apps.txt
+          cp public/proxy_apps.txt /tmp/proxy_apps.txt
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+
+            # If source code changed after this run started, do not publish
+            # results produced by stale code. The newer main push has its own run.
+            changed_non_generated="$(
+              git diff --name-only "$GITHUB_SHA..origin/main" -- \
+                ':(exclude)public/direct_apps.txt' \
+                ':(exclude)public/proxy_apps.txt' || true
+            )"
+            if [ -n "$changed_non_generated" ]; then
+              echo "main changed while this run was working; refusing to publish stale results:"
+              echo "$changed_non_generated"
+              exit 0
+            fi
+
+            # Rebase the generated output on the latest main. Remote list-only
+            # commits are safe to replace with the fresher result from this run.
+            git reset --hard origin/main
+            cp /tmp/direct_apps.txt public/direct_apps.txt
+            cp /tmp/proxy_apps.txt public/proxy_apps.txt
+            git add public/direct_apps.txt public/proxy_apps.txt
+
+            if git diff --staged --quiet; then
+              echo "No changes"
+              exit 0
+            fi
+
+            git commit -m "chore: update app lists $(date -u +%F)"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push raced with another list update; retrying ($attempt/3)"
+            sleep 2
+          done
+
+          echo "Failed to publish generated lists after 3 attempts"
+          exit 1
