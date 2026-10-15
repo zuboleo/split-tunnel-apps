@@ -41,21 +41,45 @@ APP_QUERIES = [
     "работа",
 ]
 
-MAX_CONTEXTS_PER_SOURCE_ROLE = 10
-MAX_CONTEXTS_PER_APP = 12
-MAX_DEVELOPER_CONTEXTS_PER_APP = 2
+MAX_REPORTS_PER_SOURCE = 16
+MAX_REPORTS_PER_APP = 10
+MAX_DEVELOPER_ONLY_REPORTS = 1
+MAX_FRAGMENTS_PER_TEXT = 2
+GOOGLE_REVIEW_COUNT = 160
+RUSTORE_REVIEW_PAGES = 3
 
 log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
-class ContextItem:
-    source: str
-    role: str
-    text: str
+class ReviewReport:
+    """One independent store review and its developer reply.
 
-    def as_payload(self) -> dict[str, str]:
-        return {"source": self.source, "role": self.role, "text": self.text}
+    Only extracted VPN sentences are kept. The full review never leaves the
+    current process and is never persisted.
+    """
+
+    source: str
+    review: tuple[str, ...]
+    developer_reply: tuple[str, ...]
+
+    @property
+    def has_user_context(self) -> bool:
+        return bool(self.review)
+
+    def dedupe_key(self) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        return (
+            tuple(value.casefold() for value in self.review),
+            tuple(value.casefold() for value in self.developer_reply),
+        )
+
+    def as_payload(self, report_id: str) -> dict[str, object]:
+        return {
+            "report_id": report_id,
+            "source": self.source,
+            "review": list(self.review),
+            "developer_reply": list(self.developer_reply),
+        }
 
 
 def _read_ids(path: Path) -> set[str]:
@@ -73,140 +97,160 @@ def _write_ids(path: Path, values: set[str]) -> None:
     path.write_text(",".join(sorted(values)) + "\n", encoding="utf-8")
 
 
-def _add_text(
-    contexts: dict[str, list[ContextItem]],
+def _extract(text: str) -> tuple[str, ...]:
+    return tuple(extract_vpn_contexts(text)[:MAX_FRAGMENTS_PER_TEXT])
+
+
+def _add_report(
+    reports: dict[str, list[ReviewReport]],
     package_id: str,
-    text: str,
+    review: str,
+    developer_reply: str,
     *,
     source: str,
-    role: str,
 ) -> None:
-    bucket = contexts[package_id]
-    same_bucket = sum(1 for item in bucket if item.source == source and item.role == role)
-    if same_bucket >= MAX_CONTEXTS_PER_SOURCE_ROLE:
+    review_context = _extract(review)
+    reply_context = _extract(developer_reply)
+    if not review_context and not reply_context:
         return
 
-    existing = {item.text.casefold() for item in bucket}
-    for fragment in extract_vpn_contexts(text):
-        key = fragment.casefold()
-        if key in existing:
-            continue
-        bucket.append(ContextItem(source=source, role=role, text=fragment))
-        existing.add(key)
-        same_bucket += 1
-        if same_bucket >= MAX_CONTEXTS_PER_SOURCE_ROLE:
-            break
+    bucket = reports[package_id]
+    if sum(item.source == source for item in bucket) >= MAX_REPORTS_PER_SOURCE:
+        return
+
+    report = ReviewReport(
+        source=source,
+        review=review_context,
+        developer_reply=reply_context,
+    )
+    key = report.dedupe_key()
+    if any(item.dedupe_key() == key for item in bucket):
+        return
+    bucket.append(report)
 
 
-def _round_robin(items: list[ContextItem], *, limit: int, seen: set[str]) -> list[ContextItem]:
-    by_source: dict[str, list[ContextItem]] = defaultdict(list)
-    for item in items:
-        by_source[item.source].append(item)
+def _round_robin_reports(
+    reports: list[ReviewReport],
+    *,
+    limit: int,
+    seen: set[tuple[tuple[str, ...], tuple[str, ...]]],
+) -> list[ReviewReport]:
+    by_source: dict[str, list[ReviewReport]] = defaultdict(list)
+    for report in reports:
+        by_source[report.source].append(report)
 
-    result: list[ContextItem] = []
+    selected: list[ReviewReport] = []
     sources = sorted(by_source)
     index = 0
-    while len(result) < limit:
-        added = False
+    while len(selected) < limit:
+        any_remaining = False
         for source in sources:
-            source_items = by_source[source]
-            if index >= len(source_items):
+            source_reports = by_source[source]
+            if index >= len(source_reports):
                 continue
-            item = source_items[index]
-            key = item.text.casefold()
-            if key not in seen:
-                seen.add(key)
-                result.append(item)
-                added = True
-                if len(result) >= limit:
-                    break
-        if not added and all(index >= len(by_source[source]) - 1 for source in sources):
+            any_remaining = True
+            report = source_reports[index]
+            key = report.dedupe_key()
+            if key in seen:
+                continue
+            seen.add(key)
+            selected.append(report)
+            if len(selected) >= limit:
+                break
+        if not any_remaining:
             break
         index += 1
-    return result
+    return selected
 
 
-def select_contexts(items: list[ContextItem]) -> list[ContextItem]:
-    """Keep a small source-balanced evidence packet for one app.
+def select_reports(reports: list[ReviewReport]) -> list[ReviewReport]:
+    """Build a compact packet without pretending sentences are independent.
 
-    User reviews are primary evidence. Developer replies are included only as a
-    small supplement so boilerplate support answers cannot dominate the model.
+    Reports containing user VPN context are primary. A developer-only report is
+    allowed only as a small supplement because generic support templates are a
+    frequent source of false DIRECT classifications.
     """
-    seen: set[str] = set()
-    reviews = [item for item in items if item.role == "review"]
-    replies = [item for item in items if item.role == "developer_reply"]
+    seen: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
+    user_reports = [report for report in reports if report.has_user_context]
+    developer_only = [report for report in reports if not report.has_user_context]
 
-    selected = _round_robin(
-        reviews,
-        limit=MAX_CONTEXTS_PER_APP - MAX_DEVELOPER_CONTEXTS_PER_APP,
+    selected = _round_robin_reports(
+        user_reports,
+        limit=MAX_REPORTS_PER_APP - MAX_DEVELOPER_ONLY_REPORTS,
         seen=seen,
     )
-    remaining = MAX_CONTEXTS_PER_APP - len(selected)
+    remaining = MAX_REPORTS_PER_APP - len(selected)
     if remaining:
         selected.extend(
-            _round_robin(
-                replies,
-                limit=min(MAX_DEVELOPER_CONTEXTS_PER_APP, remaining),
+            _round_robin_reports(
+                developer_only,
+                limit=min(MAX_DEVELOPER_ONLY_REPORTS, remaining),
                 seen=seen,
             )
         )
     return selected
 
 
-def collect_contexts(priority: set[str] | None = None) -> tuple[dict[str, str], dict[str, list[ContextItem]]]:
+def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], dict[str, list[ReviewReport]]]:
     priority = set(priority or set())
     names: dict[str, str] = {package_id: package_id for package_id in priority}
-    raw_contexts: dict[str, list[ContextItem]] = defaultdict(list)
+    raw_reports: dict[str, list[ReviewReport]] = defaultdict(list)
 
     session = requests.Session()
     session.headers.update({"User-Agent": "split-tunnel-apps/1.0"})
 
     google = GooglePlayParser()
-    google_packages = google.discover_packages(APP_QUERIES, per_query=10, max_apps=140)
+    google_packages = google.discover_packages(APP_QUERIES, per_query=10, max_apps=160)
     for package_id in priority:
         google_packages.setdefault(package_id, package_id)
     names.update(google_packages)
 
     for package_id, app_name in google_packages.items():
         names[package_id] = app_name or package_id
-        for review, reply in google.fetch_recent_reviews(package_id, count=80):
-            _add_text(raw_contexts, package_id, review, source="google_play", role="review")
-            _add_text(raw_contexts, package_id, reply, source="google_play", role="developer_reply")
+        for review, reply in google.fetch_recent_reviews(package_id, count=GOOGLE_REVIEW_COUNT):
+            _add_report(raw_reports, package_id, review, reply, source="google_play")
 
     rustore = RuStoreParser()
     rustore_packages = rustore.discover_packages(
         session,
         APP_QUERIES,
         priority=priority,
-        max_apps=200,
+        max_apps=220,
     )
     for package_id, app_name in rustore_packages.items():
         if app_name and app_name != package_id:
             names[package_id] = app_name
-        for review, reply in rustore.fetch_recent_reviews(session, package_id, limit=60, max_pages=2):
-            _add_text(raw_contexts, package_id, review, source="rustore", role="review")
-            _add_text(raw_contexts, package_id, reply, source="rustore", role="developer_reply")
+        for review, reply in rustore.fetch_recent_reviews(
+            session,
+            package_id,
+            limit=60,
+            max_pages=RUSTORE_REVIEW_PAGES,
+        ):
+            _add_report(raw_reports, package_id, review, reply, source="rustore")
 
-    contexts = {
+    reports = {
         package_id: selected
-        for package_id, items in raw_contexts.items()
-        if (selected := select_contexts(items))
+        for package_id, items in raw_reports.items()
+        if (selected := select_reports(items))
     }
-    log.info("Collected VPN contexts for %d apps", len(contexts))
-    return names, contexts
+    log.info("Collected VPN reports for %d apps", len(reports))
+    return names, reports
 
 
-def classify_contexts(
+def classify_reports(
     classifier: DeepSeekClassifier,
     names: dict[str, str],
-    contexts: dict[str, list[ContextItem]],
+    reports: dict[str, list[ReviewReport]],
 ) -> tuple[set[str], set[str], int]:
     direct: set[str] = set()
     proxy: set[str] = set()
     skipped = 0
 
-    for package_id, items in sorted(contexts.items()):
-        payload = [item.as_payload() for item in items]
+    for package_id, app_reports in sorted(reports.items()):
+        payload = [
+            report.as_payload(f"r{index}")
+            for index, report in enumerate(app_reports, start=1)
+        ]
         try:
             route = classifier.classify(package_id, names.get(package_id), payload)
         except Exception as exc:
@@ -225,25 +269,24 @@ def classify_contexts(
 
 
 def run() -> tuple[set[str], set[str]]:
-    # Previous public lists are used only to make sure known packages are scanned
-    # again. Their classifications are never carried into the new result.
+    # Previous public lists are scan priorities only. Their old route is not
+    # carried forward: every published entry must be justified again this run.
     priority = _read_ids(DIRECT_FILE) | _read_ids(PROXY_FILE)
-    names, contexts = collect_contexts(priority=priority)
-    if not contexts:
-        raise RuntimeError("No VPN contexts collected; refusing to overwrite public lists")
+    names, reports = collect_reports(priority=priority)
+    if not reports:
+        raise RuntimeError("No VPN reports collected; refusing to overwrite public lists")
 
     classifier = DeepSeekClassifier.from_env()
-    direct, proxy, skipped = classify_contexts(classifier, names, contexts)
+    direct, proxy, skipped = classify_reports(classifier, names, reports)
     if not direct and not proxy:
         raise RuntimeError("DeepSeek classified every app as SKIP; refusing to overwrite public lists")
 
-    # Write only after the complete classification succeeds. A partial API/store
-    # failure must not publish half-built lists.
+    # Publication is transactional: write only after every model call succeeds.
     _write_ids(DIRECT_FILE, direct)
     _write_ids(PROXY_FILE, proxy)
     log.info(
         "Done: %d apps checked, %d skipped, %d DIRECT, %d PROXY",
-        len(contexts),
+        len(reports),
         skipped,
         len(direct),
         len(proxy),
