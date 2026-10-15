@@ -1,6 +1,11 @@
 import pytest
 
-from scraper.main import ReviewReport, classify_reports, select_reports
+from scraper.main import (
+    ReviewReport,
+    classify_reports,
+    merge_unobserved_previous,
+    select_reports,
+)
 
 
 class FakeClassifier:
@@ -69,6 +74,42 @@ def test_skip_never_enters_public_routes() -> None:
     assert direct == {"app.direct"}
     assert proxy == {"app.proxy"}
     assert skipped == 1
+
+
+def test_unobserved_previous_route_is_retained() -> None:
+    reports = {
+        "app.observed": [ReviewReport("rustore", ("VPN не влияет",), ())],
+    }
+
+    direct, proxy, retained = merge_unobserved_previous(
+        set(),
+        set(),
+        reports,
+        previous_direct={"app.known.direct", "app.observed"},
+        previous_proxy={"app.known.proxy"},
+    )
+
+    assert direct == {"app.known.direct"}
+    assert proxy == {"app.known.proxy"}
+    assert retained == 2
+
+
+def test_observed_skip_is_not_carried_forward() -> None:
+    reports = {
+        "app.old": [ReviewReport("rustore", ("VPN не помог",), ())],
+    }
+
+    direct, proxy, retained = merge_unobserved_previous(
+        set(),
+        set(),
+        reports,
+        previous_direct={"app.old"},
+        previous_proxy=set(),
+    )
+
+    assert direct == set()
+    assert proxy == set()
+    assert retained == 0
 
 
 def test_classification_failure_aborts_instead_of_publishing_partial_result() -> None:
