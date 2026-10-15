@@ -23,17 +23,32 @@ _WORK_LEMMAS = {
     "работать",
     "открываться",
     "открывать",
+    "открыть",
     "запускаться",
     "запускать",
+    "запустить",
     "заходить",
+    "зайти",
     "входить",
+    "войти",
     "грузиться",
+    "загрузиться",
     "загружаться",
+    "загрузить",
     "пускать",
 }
 _DISABLE_LEMMAS = {"отключать", "отключить", "выключать", "выключить"}
 _ENABLE_LEMMAS = {"включать", "включить", "подключать", "подключить"}
-_REQUIRE_LEMMAS = {"требовать", "требоваться", "нужно", "необходимо", "надо", "приходиться"}
+_REQUIRE_LEMMAS = {
+    "требовать",
+    "требоваться",
+    "нужно",
+    "нужный",
+    "необходимо",
+    "необходимый",
+    "надо",
+    "приходиться",
+}
 _DETECT_LEMMAS = {
     "обнаруживать",
     "обнаружить",
@@ -148,7 +163,7 @@ def _is_negated(tokens: list[_Token], index: int) -> bool:
 
 def _condition(tokens: list[_Token], anchor: int) -> str:
     before = tokens[max(0, anchor - 4):anchor]
-    before_lemmas = [t.lemma for t in before]
+    before_lemmas = [token.lemma for token in before]
 
     # Verb operators are more specific than a nearby preposition.
     for i in _near(_DISABLE_LEMMAS, tokens, anchor, 5):
@@ -199,6 +214,7 @@ def _same_with_without_vpn(text: str) -> bool:
         rf"(?:что\s+)?с\s+{alias}[^.!?]{{0,45}}(?:что\s+)?без(?:\s+(?:него|{alias}))?[^.!?]{{0,40}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)",
         rf"с\s+{alias}\s+(?:или|и|/)\s+без(?:\s+(?:него|{alias}))?[^.!?]{{0,40}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)",
         rf"(?:не\s+работает|не\s+открывается|глючит)[^.!?]{{0,45}}с\s+{alias}[^.!?]{{0,35}}(?:и|или|что)\s+без",
+        rf"(?:с|через)\s+{alias}[^.!?]{{0,20}}(?:тоже|так\s+же)[^.!?]{{0,20}}(?:не\s+работает|не\s+открывается|не\s+грузится|глючит|через\s+раз|ошибк)",
     )
     return any(re.search(pattern, text, re.I) for pattern in patterns)
 
@@ -214,7 +230,6 @@ def _vpn_does_not_help(text: str) -> bool:
 
 
 def _false_detection(tokens: list[_Token], anchor: int) -> bool:
-    # "Требует отключить VPN, но он выключен" / "VPN у меня не включен".
     has_disable = bool(_near(_DISABLE_LEMMAS, tokens, anchor, 6))
     if not has_disable:
         return False
@@ -232,7 +247,11 @@ def _problem_context(tokens: list[_Token], app_name: str | None) -> bool:
     if any(token.lemma in {"ошибка", "проблема", "недоступный"} for token in tokens):
         return True
     if app_name:
-        app_words = {part.lower() for part in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", app_name) if len(part) >= 3}
+        app_words = {
+            part.lower()
+            for part in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", app_name)
+            if len(part) >= 3
+        }
         token_words = {token.lower for token in tokens}
         return bool(app_words & token_words)
     return False
@@ -291,7 +310,6 @@ def _relation_for_anchor(
     if _near(_DETECT_LEMMAS, clause, local_anchor, 6):
         add("direct", 0.96, "VPN", "DETECTED", "vpn_detected")
 
-    # Colloquial but quite specific: "у приложения аллергия на VPN", "не любит VPN".
     lower_raw = raw.lower()
     if re.search(r"(?:аллерги\w*|не\s+любит|не\s+дружит)[^.!?]{0,35}(?:vpn|впн|квн)", lower_raw, re.I):
         add("direct", 0.91, "WITH_VPN", "NOT_WORKING", "vpn_allergy")
@@ -304,7 +322,13 @@ def _relation_for_anchor(
     elif effect == "WORKING":
         if condition == "WITH_VPN":
             confidence = 0.97 if _contains_only(clause) else 0.66
-            add("proxy", confidence, condition, effect, "works_only_with_vpn" if confidence > 0.9 else "works_with_vpn")
+            add(
+                "proxy",
+                confidence,
+                condition,
+                effect,
+                "works_only_with_vpn" if confidence > 0.9 else "works_with_vpn",
+            )
         elif condition == "WITHOUT_VPN" and _contains_goal(clause):
             # "сделайте, чтобы работало без VPN" describes the desired state,
             # so it is evidence that VPN is currently required.
@@ -315,8 +339,6 @@ def _relation_for_anchor(
             add("proxy", 0.94, condition, effect or "REQUIRED", "enable_vpn")
 
     if _near(_BLOCK_LEMMAS, clause, local_anchor, 7):
-        # A block verb tied to WITH_VPN/VPN means VPN causes the problem. Under
-        # WITHOUT_VPN it usually describes a restriction that VPN is bypassing.
         if condition in {"WITH_VPN", "VPN"}:
             add("direct", 0.94, condition, "BLOCKED", "vpn_blocks_access")
         elif condition == "WITHOUT_VPN":
@@ -327,21 +349,20 @@ def _relation_for_anchor(
         # has no app/access/problem context.
         add("proxy", 0.92, "VPN", "HELPS", "vpn_helps_access")
 
-    # "VPN нужен для входа/доступа".
     if _contains(clause, _REQUIRE_LEMMAS) and _contains(clause, _ACCESS_LEMMAS):
         disable_near = any(not _is_negated(clause, i) for i in disable_indexes)
         if not disable_near:
             add("proxy", 0.95, "VPN", "REQUIRED", "vpn_required")
 
-    # "VPN для обхода блокировок YouTube". This needs application/problem
-    # context so generic descriptions of VPN technology stay neutral.
     if {"обход", "блокировка"}.issubset({token.lemma for token in clause}) and _problem_context(clause, app_name):
         add("proxy", 0.91, "VPN", "BYPASS_RESTRICTION", "vpn_bypasses_restriction")
 
-    # If a normal work verb was found very far from the anchor, ignore it rather
-    # than inventing a relation across unrelated parts of a long sentence.
     if effect_index is not None and abs(effect_index - local_anchor) > 8:
-        relations = [rel for rel in relations if rel.effect not in {"WORKING", "NOT_WORKING"}]
+        relations = [
+            relation
+            for relation in relations
+            if relation.effect not in {"WORKING", "NOT_WORKING"}
+        ]
 
     return relations
 
@@ -355,15 +376,28 @@ def _english_relations(sentence: str, *, role: str) -> list[_Relation]:
     def add(route: str, confidence: float, condition: str, effect: str, reason: str) -> None:
         result.append(_Relation(route, _adjust(confidence, role, reason), condition, effect, reason))
 
-    if re.search(r"(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)[^.!?]{0,50}without\s+vpn", text) or re.search(
-        r"without\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)", text
+    if re.search(
+        r"(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)[^.!?]{0,50}without\s+vpn",
+        text,
+    ) or re.search(
+        r"without\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)",
+        text,
     ):
         add("proxy", 0.97, "WITHOUT_VPN", "NOT_WORKING", "fails_without_vpn")
-    if re.search(r"with\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)", text):
+    if re.search(
+        r"with\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)",
+        text,
+    ):
         add("direct", 0.94, "WITH_VPN", "NOT_WORKING", "fails_with_vpn")
     if re.search(r"(?:disable|turn\s+off)[^.!?]{0,30}vpn", text):
         explicit = bool(re.search(r"(?:required|must|need|to\s+continue|to\s+login|for\s+access)", text))
-        add("direct", 0.97 if explicit else 0.66, "DISABLE_VPN", "REQUIRED" if explicit else "ADVICE", "requires_disable_vpn" if explicit else "disable_vpn")
+        add(
+            "direct",
+            0.97 if explicit else 0.66,
+            "DISABLE_VPN",
+            "REQUIRED" if explicit else "ADVICE",
+            "requires_disable_vpn" if explicit else "disable_vpn",
+        )
     if re.search(r"vpn[^.!?]{0,35}(?:detected|not\s+allowed|forbidden)", text):
         add("direct", 0.96, "VPN", "DETECTED", "vpn_detected")
     if re.search(r"(?:only\s+works?|works?\s+only)[^.!?]{0,35}with\s+vpn", text):
@@ -377,15 +411,27 @@ def _resolve(relations: list[_Relation]) -> Classification:
     if not relations:
         return Classification(False, 0, verdict="neutral", confidence=0.0, route="neutral")
 
-    best_direct = max((rel for rel in relations if rel.route == "direct"), key=lambda r: r.confidence, default=None)
-    best_proxy = max((rel for rel in relations if rel.route == "proxy"), key=lambda r: r.confidence, default=None)
-    best_neutral = max((rel for rel in relations if rel.route == "neutral"), key=lambda r: r.confidence, default=None)
+    best_direct = max(
+        (relation for relation in relations if relation.route == "direct"),
+        key=lambda relation: relation.confidence,
+        default=None,
+    )
+    best_proxy = max(
+        (relation for relation in relations if relation.route == "proxy"),
+        key=lambda relation: relation.confidence,
+        default=None,
+    )
+    best_neutral = max(
+        (relation for relation in relations if relation.route == "neutral"),
+        key=lambda relation: relation.confidence,
+        default=None,
+    )
 
     direct_conf = best_direct.confidence if best_direct else 0.0
     proxy_conf = best_proxy.confidence if best_proxy else 0.0
     neutral_conf = best_neutral.confidence if best_neutral else 0.0
-
     strongest_route = max(direct_conf, proxy_conf)
+
     if neutral_conf >= 0.90 and neutral_conf >= strongest_route - 0.02:
         route = "neutral"
         confidence = neutral_conf
@@ -419,9 +465,21 @@ def _resolve(relations: list[_Relation]) -> Classification:
         "uncertain": "uncertain",
     }[route]
 
-    direct_reasons = sorted({rel.reason for rel in relations if rel.route == "direct" and rel.confidence >= 0.80})
-    proxy_reasons = sorted({rel.reason for rel in relations if rel.route == "proxy" and rel.confidence >= 0.80})
-    weak_reasons = sorted({rel.reason for rel in relations if rel.confidence < 0.80})
+    direct_reasons = sorted(
+        {
+            relation.reason
+            for relation in relations
+            if relation.route == "direct" and relation.confidence >= 0.80
+        }
+    )
+    proxy_reasons = sorted(
+        {
+            relation.reason
+            for relation in relations
+            if relation.route == "proxy" and relation.confidence >= 0.80
+        }
+    )
+    weak_reasons = sorted({relation.reason for relation in relations if relation.confidence < 0.80})
 
     return Classification(
         relevant=route in {"direct", "proxy"},
@@ -475,9 +533,7 @@ def combine_classifications(*items: Classification) -> Classification:
     for item in items:
         if item.route not in {"direct", "proxy", "neutral"} or item.confidence <= 0:
             continue
-        reason = (
-            (item.strong_matches or item.negative_matches or item.weak_matches or [item.route])[0]
-        )
+        reason = (item.strong_matches or item.negative_matches or item.weak_matches or [item.route])[0]
         relations.append(
             _Relation(
                 route=item.route,
