@@ -14,20 +14,26 @@ class GooglePlayParser:
             return {}
 
         found: dict[str, str] = {}
+        # RU search is primary, but a second EN/US pass is important because
+        # globally popular apps can be absent or poorly ranked in RU search.
+        locales = (("ru", "ru"), ("en", "us"))
         for query in queries:
             if len(found) >= max_apps:
                 break
-            try:
-                rows = search(query, lang="ru", country="ru", n_hits=per_query)
-            except Exception as exc:
-                log.warning("Google Play search failed for %r: %s", query, exc)
-                continue
-            for row in rows:
-                package_id = row.get("appId")
-                if package_id:
-                    found.setdefault(package_id, row.get("title") or package_id)
+            for lang, country in locales:
                 if len(found) >= max_apps:
                     break
+                try:
+                    rows = search(query, lang=lang, country=country, n_hits=per_query)
+                except Exception as exc:
+                    log.warning("Google Play search failed for %r (%s/%s): %s", query, lang, country, exc)
+                    continue
+                for row in rows:
+                    package_id = row.get("appId")
+                    if package_id:
+                        found.setdefault(package_id, row.get("title") or package_id)
+                    if len(found) >= max_apps:
+                        break
         return found
 
     def fetch_recent_reviews(self, package_id: str, *, count: int = 80) -> list[tuple[str, str]]:
