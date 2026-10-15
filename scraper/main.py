@@ -46,7 +46,9 @@ MAX_REPORTS_PER_APP = 10
 MAX_DEVELOPER_ONLY_REPORTS = 1
 MAX_FRAGMENTS_PER_TEXT = 2
 GOOGLE_REVIEW_COUNT = 160
+GOOGLE_PRIORITY_REVIEW_COUNT = 600
 RUSTORE_REVIEW_PAGES = 3
+RUSTORE_PRIORITY_REVIEW_PAGES = 8
 
 log = logging.getLogger(__name__)
 
@@ -164,12 +166,7 @@ def _round_robin_reports(
 
 
 def select_reports(reports: list[ReviewReport]) -> list[ReviewReport]:
-    """Build a compact packet without pretending sentences are independent.
-
-    Reports containing user VPN context are primary. A developer-only report is
-    allowed only as a small supplement because generic support templates are a
-    frequent source of false DIRECT classifications.
-    """
+    """Build a compact packet without pretending sentences are independent."""
     seen: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
     user_reports = [report for report in reports if report.has_user_context]
     developer_only = [report for report in reports if not report.has_user_context]
@@ -207,7 +204,10 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
 
     for package_id, app_name in google_packages.items():
         names[package_id] = app_name or package_id
-        for review, reply in google.fetch_recent_reviews(package_id, count=GOOGLE_REVIEW_COUNT):
+        review_count = (
+            GOOGLE_PRIORITY_REVIEW_COUNT if package_id in priority else GOOGLE_REVIEW_COUNT
+        )
+        for review, reply in google.fetch_recent_reviews(package_id, count=review_count):
             _add_report(raw_reports, package_id, review, reply, source="google_play")
 
     rustore = RuStoreParser()
@@ -220,11 +220,14 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
     for package_id, app_name in rustore_packages.items():
         if app_name and app_name != package_id:
             names[package_id] = app_name
+        max_pages = (
+            RUSTORE_PRIORITY_REVIEW_PAGES if package_id in priority else RUSTORE_REVIEW_PAGES
+        )
         for review, reply in rustore.fetch_recent_reviews(
             session,
             package_id,
             limit=60,
-            max_pages=RUSTORE_REVIEW_PAGES,
+            max_pages=max_pages,
         ):
             _add_report(raw_reports, package_id, review, reply, source="rustore")
 
@@ -268,26 +271,57 @@ def classify_reports(
     return direct, proxy, skipped
 
 
+def merge_unobserved_previous(
+    direct: set[str],
+    proxy: set[str],
+    reports: dict[str, list[ReviewReport]],
+    previous_direct: set[str],
+    previous_proxy: set[str],
+) -> tuple[set[str], set[str], int]:
+    """Keep an already-published route only when no fresh VPN report exists.
+
+    A published list is the only durable state this project intentionally keeps.
+    If fresh VPN evidence exists, DeepSeek must justify the route again; SKIP
+    removes it. If stores simply do not expose a VPN mention in this run, the
+    previously verified route is not forgotten because of a sampling window.
+    """
+    observed = set(reports)
+    retained_direct = previous_direct - observed
+    retained_proxy = previous_proxy - observed
+    direct |= retained_direct
+    proxy |= retained_proxy
+    return direct, proxy, len(retained_direct | retained_proxy)
+
+
 def run() -> tuple[set[str], set[str]]:
-    # Previous public lists are scan priorities only. Their old route is not
-    # carried forward: every published entry must be justified again this run.
-    priority = _read_ids(DIRECT_FILE) | _read_ids(PROXY_FILE)
+    previous_direct = _read_ids(DIRECT_FILE)
+    previous_proxy = _read_ids(PROXY_FILE)
+    priority = previous_direct | previous_proxy
+
     names, reports = collect_reports(priority=priority)
     if not reports:
         raise RuntimeError("No VPN reports collected; refusing to overwrite public lists")
 
     classifier = DeepSeekClassifier.from_env()
     direct, proxy, skipped = classify_reports(classifier, names, reports)
+    direct, proxy, retained = merge_unobserved_previous(
+        direct,
+        proxy,
+        reports,
+        previous_direct,
+        previous_proxy,
+    )
     if not direct and not proxy:
-        raise RuntimeError("DeepSeek classified every app as SKIP; refusing to overwrite public lists")
+        raise RuntimeError("No publishable routes found; refusing to overwrite public lists")
 
     # Publication is transactional: write only after every model call succeeds.
     _write_ids(DIRECT_FILE, direct)
     _write_ids(PROXY_FILE, proxy)
     log.info(
-        "Done: %d apps checked, %d skipped, %d DIRECT, %d PROXY",
+        "Done: %d apps checked, %d skipped, %d retained without fresh evidence, %d DIRECT, %d PROXY",
         len(reports),
         skipped,
+        retained,
         len(direct),
         len(proxy),
     )
