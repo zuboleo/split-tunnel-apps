@@ -170,19 +170,16 @@ def _condition(tokens: list[_Token], anchor: int) -> str:
     before = tokens[max(0, anchor - 4):anchor]
     before_lemmas = [token.lemma for token in before]
 
-    # Explicit prepositions closest to VPN are the clearest condition markers.
     if "без" in before_lemmas[-3:]:
         return "WITHOUT_VPN"
     if any(value in before_lemmas[-3:] for value in {"с", "через"}):
         return "WITH_VPN"
 
-    # "при включенном VPN" describes VPN state, not an instruction to enable it.
     if "при" in before_lemmas[-3:]:
         if any(token.lemma in _DISABLE_LEMMAS or token.lemma in _OFF_WORDS for token in before):
             return "WITHOUT_VPN"
         return "WITH_VPN"
 
-    # Participles also describe state: "VPN включен/отключен".
     for token in before:
         if token.pos == "PRTF" or token.lemma in _ACTIVE_WORDS | _OFF_WORDS:
             if token.lemma in _DISABLE_LEMMAS or token.lemma in _OFF_WORDS:
@@ -190,7 +187,6 @@ def _condition(tokens: list[_Token], anchor: int) -> str:
             if token.lemma in _ENABLE_LEMMAS or token.lemma in _ACTIVE_WORDS:
                 return "WITH_VPN"
 
-    # Actual verb operators: "включил VPN", "выключите VPN".
     for i in _near(_DISABLE_LEMMAS, tokens, anchor, 5):
         if tokens[i].pos != "PRTF" and not _is_negated(tokens, i):
             return "DISABLE_VPN"
@@ -205,6 +201,10 @@ def _work_effect(tokens: list[_Token], anchor: int) -> tuple[str | None, int | N
     candidates: list[tuple[int, int, str]] = []
     for i, token in enumerate(tokens):
         if token.lemma not in _WORK_LEMMAS:
+            continue
+        # Infinitives usually express an instruction/goal ("попробуйте открыть"),
+        # not an observed application state. Other rules handle such advice.
+        if token.pos == "INFN":
             continue
         distance = abs(i - anchor)
         if distance > 8:
@@ -281,8 +281,6 @@ def _problem_context(tokens: list[_Token], app_name: str | None) -> bool:
 
 def _adjust(confidence: float, role: str, reason: str) -> float:
     if role == "developer_reply":
-        # Generic support advice like "try disabling VPN" is evidence, but not
-        # proof that the application actively rejects VPN.
         if reason == "disable_vpn":
             return min(confidence, 0.54)
         return confidence * 0.97
@@ -319,7 +317,9 @@ def _relation_for_anchor(
         add("direct", 0.99, "DISABLE_VPN", "FALSE_DETECTION", "false_vpn_detection")
 
     disable_indexes = _near(_DISABLE_LEMMAS, clause, local_anchor, 5)
-    if disable_indexes and any(
+    # When the clause contains an observed before/after state, that relation is
+    # more informative than treating the state-changing verb as generic advice.
+    if effect is None and disable_indexes and any(
         clause[i].pos != "PRTF" and not _is_negated(clause, i)
         for i in disable_indexes
     ):
@@ -359,8 +359,6 @@ def _relation_for_anchor(
         elif condition == "DISABLE_VPN":
             add("direct", 0.96, condition, effect, "works_after_disabling_vpn")
         elif condition == "WITHOUT_VPN" and _contains_goal(clause):
-            # "сделайте, чтобы работало без VPN" describes the desired state,
-            # so it is evidence that VPN is currently required.
             add("proxy", 0.94, condition, "CURRENTLY_REQUIRES_VPN", "goal_work_without_vpn")
 
     if condition == "ENABLE_VPN" and effect is None:
@@ -374,8 +372,6 @@ def _relation_for_anchor(
             add("proxy", 0.93, condition, "BLOCKED", "blocked_without_vpn")
 
     if _near(_HELP_LEMMAS, clause, local_anchor, 6) and _problem_context(clause, app_name):
-        # "VPN помогает защищать интернет" is deliberately excluded because it
-        # has no app/access/problem context.
         add("proxy", 0.92, "VPN", "HELPS", "vpn_helps_access")
 
     if _contains(clause, _REQUIRE_LEMMAS) and _contains(clause, _ACCESS_LEMMAS):
