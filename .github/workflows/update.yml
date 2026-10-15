@@ -68,26 +68,45 @@ jobs:
           def ids(raw: str) -> set[str]:
               return {item.strip() for item in raw.replace("\n", ",").split(",") if item.strip()}
 
+          def base_file(ref: str, path: str) -> set[str]:
+              proc = subprocess.run(
+                  ["git", "show", f"origin/{ref}:{path}"],
+                  text=True,
+                  capture_output=True,
+              )
+              return ids(proc.stdout) if proc.returncode == 0 else set()
+
+          def current_file(path: str) -> set[str]:
+              file = Path(path)
+              return ids(file.read_text(encoding="utf-8")) if file.exists() else set()
+
           base_ref = os.environ["BASE_REF"]
-          base_raw = subprocess.check_output(
-              ["git", "show", f"origin/{base_ref}:public/app_ids.txt"],
-              text=True,
-          )
-          current_raw = Path("public/app_ids.txt").read_text(encoding="utf-8")
           status = json.loads(Path("public/status.json").read_text(encoding="utf-8"))
-          added = sorted(ids(current_raw) - ids(base_raw))
-          removed = sorted(ids(base_raw) - ids(current_raw))
+
+          base_direct = base_file(base_ref, "public/direct_apps.txt") or base_file(base_ref, "public/app_ids.txt")
+          base_proxy = base_file(base_ref, "public/proxy_apps.txt")
+          current_direct = current_file("public/direct_apps.txt")
+          current_proxy = current_file("public/proxy_apps.txt")
+
+          direct_added = sorted(current_direct - base_direct)
+          direct_removed = sorted(base_direct - current_direct)
+          proxy_added = sorted(current_proxy - base_proxy)
+          proxy_removed = sorted(base_proxy - current_proxy)
 
           lines = [
-              "## Generated split-tunnel list",
+              "## Generated split-tunnel lists",
               "",
-              f"Confirmed: **{status.get('confirmed_count', 0)}** · "
-              f"Candidates: **{status.get('candidate_count', 0)}** · "
-              f"Rejected: **{status.get('rejected_count', 0)}**",
+              f"DIRECT: **{status.get('direct_count', 0)}** · "
+              f"PROXY: **{status.get('proxy_count', 0)}** · "
+              f"Candidates: **{status.get('candidate_count', 0)}**",
               "",
-              f"Added vs `{base_ref}` ({len(added)}): " + (", ".join(f"`{x}`" for x in added) or "none"),
+              f"DIRECT added ({len(direct_added)}): " + (", ".join(f"`{x}`" for x in direct_added) or "none"),
               "",
-              f"Removed vs `{base_ref}` ({len(removed)}): " + (", ".join(f"`{x}`" for x in removed) or "none"),
+              f"DIRECT removed ({len(direct_removed)}): " + (", ".join(f"`{x}`" for x in direct_removed) or "none"),
+              "",
+              f"PROXY added ({len(proxy_added)}): " + (", ".join(f"`{x}`" for x in proxy_added) or "none"),
+              "",
+              f"PROXY removed ({len(proxy_removed)}): " + (", ".join(f"`{x}`" for x in proxy_removed) or "none"),
           ]
           report = "\n".join(lines)
           print(report)
