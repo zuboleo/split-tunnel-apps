@@ -18,6 +18,12 @@ PUBLIC = ROOT / "public"
 DIRECT_FILE = PUBLIC / "direct_apps.txt"
 PROXY_FILE = PUBLIC / "proxy_apps.txt"
 
+# Tiny manual safety net for routes that were verified independently of noisy
+# store reviews. This is code/config, not persisted evidence. Everything else
+# must be rediscovered and justified by the current run.
+VERIFIED_DIRECT = {"ru.dns.shop.android"}
+VERIFIED_PROXY = {"com.google.android.youtube"}
+
 APP_QUERIES = [
     "банк",
     "магазин",
@@ -120,11 +126,7 @@ def _add_report(
     if sum(item.source == source for item in bucket) >= MAX_REPORTS_PER_SOURCE:
         return
 
-    report = ReviewReport(
-        source=source,
-        review=review_context,
-        developer_reply=reply_context,
-    )
+    report = ReviewReport(source=source, review=review_context, developer_reply=reply_context)
     key = report.dedupe_key()
     if any(item.dedupe_key() == key for item in bucket):
         return
@@ -166,7 +168,6 @@ def _round_robin_reports(
 
 
 def select_reports(reports: list[ReviewReport]) -> list[ReviewReport]:
-    """Build a compact packet without pretending sentences are independent."""
     seen: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
     user_reports = [report for report in reports if report.has_user_context]
     developer_only = [report for report in reports if not report.has_user_context]
@@ -204,10 +205,8 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
 
     for package_id, app_name in google_packages.items():
         names[package_id] = app_name or package_id
-        review_count = (
-            GOOGLE_PRIORITY_REVIEW_COUNT if package_id in priority else GOOGLE_REVIEW_COUNT
-        )
-        for review, reply in google.fetch_recent_reviews(package_id, count=review_count):
+        count = GOOGLE_PRIORITY_REVIEW_COUNT if package_id in priority else GOOGLE_REVIEW_COUNT
+        for review, reply in google.fetch_recent_reviews(package_id, count=count):
             _add_report(raw_reports, package_id, review, reply, source="google_play")
 
     rustore = RuStoreParser()
@@ -220,14 +219,12 @@ def collect_reports(priority: set[str] | None = None) -> tuple[dict[str, str], d
     for package_id, app_name in rustore_packages.items():
         if app_name and app_name != package_id:
             names[package_id] = app_name
-        max_pages = (
-            RUSTORE_PRIORITY_REVIEW_PAGES if package_id in priority else RUSTORE_REVIEW_PAGES
-        )
+        pages = RUSTORE_PRIORITY_REVIEW_PAGES if package_id in priority else RUSTORE_REVIEW_PAGES
         for review, reply in rustore.fetch_recent_reviews(
             session,
             package_id,
             limit=60,
-            max_pages=max_pages,
+            max_pages=pages,
         ):
             _add_report(raw_reports, package_id, review, reply, source="rustore")
 
@@ -250,10 +247,12 @@ def classify_reports(
     skipped = 0
 
     for package_id, app_reports in sorted(reports.items()):
-        payload = [
-            report.as_payload(f"r{index}")
-            for index, report in enumerate(app_reports, start=1)
-        ]
+        # Manually verified routes do not need to spend a model request and
+        # cannot be knocked out by a random fresh review.
+        if package_id in VERIFIED_DIRECT or package_id in VERIFIED_PROXY:
+            continue
+
+        payload = [report.as_payload(f"r{index}") for index, report in enumerate(app_reports, start=1)]
         try:
             route = classifier.classify(package_id, names.get(package_id), payload)
         except Exception as exc:
@@ -268,35 +267,15 @@ def classify_reports(
         else:
             skipped += 1
 
+    direct |= VERIFIED_DIRECT
+    proxy |= VERIFIED_PROXY
+    direct -= proxy
     return direct, proxy, skipped
 
 
-def merge_unobserved_previous(
-    direct: set[str],
-    proxy: set[str],
-    reports: dict[str, list[ReviewReport]],
-    previous_direct: set[str],
-    previous_proxy: set[str],
-) -> tuple[set[str], set[str], int]:
-    """Keep an already-published route only when no fresh VPN report exists.
-
-    A published list is the only durable state this project intentionally keeps.
-    If fresh VPN evidence exists, DeepSeek must justify the route again; SKIP
-    removes it. If stores simply do not expose a VPN mention in this run, the
-    previously verified route is not forgotten because of a sampling window.
-    """
-    observed = set(reports)
-    retained_direct = previous_direct - observed
-    retained_proxy = previous_proxy - observed
-    direct |= retained_direct
-    proxy |= retained_proxy
-    return direct, proxy, len(retained_direct | retained_proxy)
-
-
 def run() -> tuple[set[str], set[str]]:
-    previous_direct = _read_ids(DIRECT_FILE)
-    previous_proxy = _read_ids(PROXY_FILE)
-    priority = previous_direct | previous_proxy
+    previous = _read_ids(DIRECT_FILE) | _read_ids(PROXY_FILE)
+    priority = previous | VERIFIED_DIRECT | VERIFIED_PROXY
 
     names, reports = collect_reports(priority=priority)
     if not reports:
@@ -304,24 +283,17 @@ def run() -> tuple[set[str], set[str]]:
 
     classifier = DeepSeekClassifier.from_env()
     direct, proxy, skipped = classify_reports(classifier, names, reports)
-    direct, proxy, retained = merge_unobserved_previous(
-        direct,
-        proxy,
-        reports,
-        previous_direct,
-        previous_proxy,
-    )
     if not direct and not proxy:
         raise RuntimeError("No publishable routes found; refusing to overwrite public lists")
 
-    # Publication is transactional: write only after every model call succeeds.
+    # Public lists are rebuilt from the current model result plus the tiny
+    # independently verified safety net. Old model decisions are not durable.
     _write_ids(DIRECT_FILE, direct)
     _write_ids(PROXY_FILE, proxy)
     log.info(
-        "Done: %d apps checked, %d skipped, %d retained without fresh evidence, %d DIRECT, %d PROXY",
+        "Done: %d apps checked, %d skipped, %d DIRECT, %d PROXY",
         len(reports),
         skipped,
-        retained,
         len(direct),
         len(proxy),
     )
