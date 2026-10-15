@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 
@@ -25,6 +26,37 @@ class LinkFinder:
         if not phrases:
             return '"отключите VPN" OR "не работает с VPN"'
         return "(" + " OR ".join(phrases) + ")"
+
+    @staticmethod
+    def _host_matches(host: str, domain: str) -> bool:
+        host = (host or "").lower().rstrip(".")
+        domain = (domain or "").lower().rstrip(".")
+        return bool(domain) and (host == domain or host.endswith("." + domain))
+
+    @property
+    def article_domains(self) -> tuple[str, ...]:
+        return tuple(
+            str(source.get("domain") or "").lower()
+            for source in self.config.get("source_domains", [])
+            if source.get("enabled", True) and source.get("domain")
+        )
+
+    @property
+    def store_domains(self) -> tuple[str, ...]:
+        domains: list[str] = []
+        for store in self.config.get("stores", []):
+            if not store.get("enabled", True):
+                continue
+            domains.extend(str(domain).lower() for domain in store.get("domains", []) if domain)
+        return tuple(domains)
+
+    def is_article_source(self, url: str) -> bool:
+        host = (urlparse(url).hostname or "").lower()
+        return any(self._host_matches(host, domain) for domain in self.article_domains)
+
+    def is_store_source(self, url: str) -> bool:
+        host = (urlparse(url).hostname or "").lower()
+        return any(self._host_matches(host, domain) for domain in self.store_domains)
 
     def _query(self, q: str, *, news: bool = False) -> list[SearchHit]:
         settings = self.config.get("search", {})
@@ -64,7 +96,10 @@ class LinkFinder:
             for domain in store.get("domains", []):
                 add_query(f"site:{domain} {base}")
 
-        # Two generic sweeps catch new websites that are not yet in the list.
+        # Generic sweeps are useful for surfacing candidates, but callers must
+        # not fetch arbitrary third-party pages as articles. Only configured
+        # article domains are eligible for article parsing; store URLs are
+        # handled by their adapters.
         add_query(base)
         add_query(base, news=True)
 
