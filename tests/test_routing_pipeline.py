@@ -1,9 +1,10 @@
 import pytest
 
 from scraper.main import (
+    VERIFIED_DIRECT,
+    VERIFIED_PROXY,
     ReviewReport,
     classify_reports,
-    merge_unobserved_previous,
     select_reports,
 )
 
@@ -58,7 +59,7 @@ def test_multiple_sentences_in_one_review_stay_one_report() -> None:
 def test_skip_never_enters_public_routes() -> None:
     reports = {
         "app.direct": [ReviewReport("rustore", ("Приложение требует отключить VPN",), ())],
-        "app.proxy": [ReviewReport("rustore", ("Без VPN не работает, включил VPN — заработало",), ())],
+        "app.proxy": [ReviewReport("rustore", ("В России доступ только через VPN",), ())],
         "app.noise": [ReviewReport("rustore", ("VPN не помог",), ())],
     }
     classifier = FakeClassifier(
@@ -71,51 +72,32 @@ def test_skip_never_enters_public_routes() -> None:
 
     direct, proxy, skipped = classify_reports(classifier, {}, reports)
 
-    assert direct == {"app.direct"}
-    assert proxy == {"app.proxy"}
+    assert "app.direct" in direct
+    assert "app.proxy" in proxy
+    assert "app.noise" not in direct | proxy
     assert skipped == 1
 
 
-def test_unobserved_previous_route_is_retained() -> None:
+def test_verified_routes_are_always_published_without_model_call() -> None:
+    verified_direct = next(iter(VERIFIED_DIRECT))
+    verified_proxy = next(iter(VERIFIED_PROXY))
     reports = {
-        "app.observed": [ReviewReport("rustore", ("VPN не влияет",), ())],
+        verified_direct: [ReviewReport("rustore", ("VPN не влияет",), ())],
+        verified_proxy: [ReviewReport("google_play", ("VPN не влияет",), ())],
     }
+    classifier = FakeClassifier({})
 
-    direct, proxy, retained = merge_unobserved_previous(
-        set(),
-        set(),
-        reports,
-        previous_direct={"app.known.direct", "app.observed"},
-        previous_proxy={"app.known.proxy"},
-    )
+    direct, proxy, skipped = classify_reports(classifier, {}, reports)
 
-    assert direct == {"app.known.direct"}
-    assert proxy == {"app.known.proxy"}
-    assert retained == 2
-
-
-def test_observed_skip_is_not_carried_forward() -> None:
-    reports = {
-        "app.old": [ReviewReport("rustore", ("VPN не помог",), ())],
-    }
-
-    direct, proxy, retained = merge_unobserved_previous(
-        set(),
-        set(),
-        reports,
-        previous_direct={"app.old"},
-        previous_proxy=set(),
-    )
-
-    assert direct == set()
-    assert proxy == set()
-    assert retained == 0
+    assert verified_direct in direct
+    assert verified_proxy in proxy
+    assert skipped == 0
 
 
 def test_classification_failure_aborts_instead_of_publishing_partial_result() -> None:
     reports = {
-        "app.ok": [ReviewReport("rustore", ("Без VPN не работает",), ())],
-        "app.fail": [ReviewReport("google_play", ("С VPN не работает",), ())],
+        "app.ok": [ReviewReport("rustore", ("В России доступ только через VPN",), ())],
+        "app.fail": [ReviewReport("google_play", ("Приложение запрещает VPN",), ())],
     }
     classifier = FakeClassifier(
         {
