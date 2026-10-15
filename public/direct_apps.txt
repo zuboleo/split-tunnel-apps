@@ -1,1 +1,1 @@
-com.apteka.sklad,com.kazanexpress.ke_app,ru.desport.android,ru.dns.shop.android,ru.kfc.kfc_delivery,ru.otpbank.mobile,ru.raiffeisennews,ru.rshb.dbo,ru.rutube.app,ru.tander.magnit,ru.tutu.avia,team.expero.mobile.pharmacies
+com.apteka.sklad,com.kazanexpress.ke_app,ru.aliexpress.buyer,ru.desport.android,ru.kfc.kfc_delivery,ru.otpbank.mobile,ru.raiffeisennews,ru.tander.magnit,ru.tutu.avia,team.expero.mobile.pharmacies
