@@ -1,46 +1,60 @@
 import pytest
 
-from scraper.main import ContextItem, classify_contexts, select_contexts
+from scraper.main import ReviewReport, classify_reports, select_reports
 
 
 class FakeClassifier:
     def __init__(self, routes: dict[str, str | Exception]):
         self.routes = routes
 
-    def classify(self, package_id: str, app_name: str | None, contexts: list[dict[str, str]]) -> str:
+    def classify(self, package_id: str, app_name: str | None, reports: list[dict[str, object]]) -> str:
         result = self.routes[package_id]
         if isinstance(result, Exception):
             raise result
         return result
 
 
-def test_select_contexts_balances_stores_and_limits_developer_replies() -> None:
-    items = [
-        ContextItem("google_play", "review", f"Google VPN context {i}")
+def test_select_reports_balances_stores_and_limits_developer_only_reports() -> None:
+    reports = [
+        ReviewReport("google_play", (f"Google VPN context {i}",), ())
         for i in range(10)
     ]
-    items += [
-        ContextItem("rustore", "review", f"RuStore VPN context {i}")
+    reports += [
+        ReviewReport("rustore", (f"RuStore VPN context {i}",), ())
         for i in range(4)
     ]
-    items += [
-        ContextItem("google_play", "developer_reply", f"Developer VPN reply {i}")
+    reports += [
+        ReviewReport("google_play", (), (f"Developer VPN reply {i}",))
         for i in range(5)
     ]
 
-    selected = select_contexts(items)
+    selected = select_reports(reports)
 
-    assert len(selected) <= 12
-    assert any(item.source == "google_play" for item in selected)
-    assert any(item.source == "rustore" for item in selected)
-    assert sum(item.role == "developer_reply" for item in selected) <= 2
+    assert len(selected) <= 10
+    assert any(report.source == "google_play" for report in selected)
+    assert any(report.source == "rustore" for report in selected)
+    assert sum(not report.has_user_context for report in selected) <= 1
+
+
+def test_multiple_sentences_in_one_review_stay_one_report() -> None:
+    report = ReviewReport(
+        "rustore",
+        ("Без VPN не работает.", "С VPN работает."),
+        ("Спасибо за отзыв.",),
+    )
+
+    payload = report.as_payload("r1")
+
+    assert payload["report_id"] == "r1"
+    assert payload["review"] == ["Без VPN не работает.", "С VPN работает."]
+    assert payload["developer_reply"] == ["Спасибо за отзыв."]
 
 
 def test_skip_never_enters_public_routes() -> None:
-    contexts = {
-        "app.direct": [ContextItem("rustore", "review", "С VPN не работает")],
-        "app.proxy": [ContextItem("rustore", "review", "Без VPN не работает")],
-        "app.noise": [ContextItem("rustore", "review", "VPN не помог")],
+    reports = {
+        "app.direct": [ReviewReport("rustore", ("Приложение требует отключить VPN",), ())],
+        "app.proxy": [ReviewReport("rustore", ("Без VPN не работает, включил VPN — заработало",), ())],
+        "app.noise": [ReviewReport("rustore", ("VPN не помог",), ())],
     }
     classifier = FakeClassifier(
         {
@@ -50,7 +64,7 @@ def test_skip_never_enters_public_routes() -> None:
         }
     )
 
-    direct, proxy, skipped = classify_contexts(classifier, {}, contexts)
+    direct, proxy, skipped = classify_reports(classifier, {}, reports)
 
     assert direct == {"app.direct"}
     assert proxy == {"app.proxy"}
@@ -58,9 +72,9 @@ def test_skip_never_enters_public_routes() -> None:
 
 
 def test_classification_failure_aborts_instead_of_publishing_partial_result() -> None:
-    contexts = {
-        "app.ok": [ContextItem("rustore", "review", "Без VPN не работает")],
-        "app.fail": [ContextItem("google_play", "review", "С VPN не работает")],
+    reports = {
+        "app.ok": [ReviewReport("rustore", ("Без VPN не работает",), ())],
+        "app.fail": [ReviewReport("google_play", ("С VPN не работает",), ())],
     }
     classifier = FakeClassifier(
         {
@@ -70,4 +84,4 @@ def test_classification_failure_aborts_instead_of_publishing_partial_result() ->
     )
 
     with pytest.raises(RuntimeError, match="refusing to overwrite"):
-        classify_contexts(classifier, {}, contexts)
+        classify_reports(classifier, {}, reports)
