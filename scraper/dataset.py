@@ -135,7 +135,6 @@ def _row_route(row: dict) -> str:
     if route in {"direct", "proxy", "neutral", "uncertain"}:
         return route
 
-    # Compatibility with evidence produced by the previous engine.
     verdict = str(row.get("verdict") or "").lower()
     if verdict == "positive":
         return "direct"
@@ -169,7 +168,6 @@ def _content_key(row: dict) -> str:
 
 
 def _aggregate(rows: list[dict]) -> float:
-    """Combine evidence while diminishing repeats from the same source."""
     if not rows:
         return 0.0
 
@@ -194,13 +192,40 @@ def _aggregate(rows: list[dict]) -> float:
     return round(max(0.0, min(1.0, combined)), 3)
 
 
+def _empty_app(package_id: str, now: str) -> dict:
+    return {
+        "package_id": package_id,
+        "names": [],
+        "first_seen": now,
+        "last_seen": now,
+        "source_domains": [],
+        "stores": [],
+        "evidence_count": 0,
+        "direct_evidence_count": 0,
+        "proxy_evidence_count": 0,
+        "direct_confidence": 0.0,
+        "proxy_confidence": 0.0,
+        "positive_evidence_count": 0,
+        "negative_evidence_count": 0,
+        "positive_confidence": 0.0,
+        "negative_confidence": 0.0,
+        "route": "uncertain",
+        "status": "candidate",
+        "reason": "insufficient_evidence",
+        "_direct_rows": [],
+        "_proxy_rows": [],
+    }
+
+
 def build_apps(
     evidence_rows: list[dict],
     seed: dict[str, dict],
     allowlist: set[str],
     denylist: set[str],
+    proxy_allowlist: set[str] | None = None,
 ) -> dict:
     now = utcnow_iso()
+    proxy_allowlist = proxy_allowlist or set()
     apps: dict[str, dict] = {}
 
     # The historical seed contains applications known to dislike/detect VPN, so
@@ -209,58 +234,32 @@ def build_apps(
         if package_id in denylist:
             continue
         apps[package_id] = {
-            "package_id": package_id,
+            **_empty_app(package_id, now),
             "names": sorted(set(seed_item.get("names", []))),
             "first_seen": seed_item.get("first_seen") or now,
             "last_seen": seed_item.get("last_seen") or now,
             "source_domains": sorted(set(seed_item.get("source_domains", []))),
-            "stores": [],
             "evidence_count": int(seed_item.get("evidence_count", 1)),
-            "direct_evidence_count": 0,
-            "proxy_evidence_count": 0,
             "direct_confidence": 1.0,
-            "proxy_confidence": 0.0,
-            "positive_evidence_count": 0,
-            "negative_evidence_count": 0,
             "positive_confidence": 1.0,
-            "negative_confidence": 0.0,
             "route": "direct",
             "status": "confirmed",
             "reason": "seed",
-            "_direct_rows": [],
-            "_proxy_rows": [],
         }
+
+    # Explicit PROXY overrides also work without scraped evidence. This is useful
+    # for a small verified baseline and for correcting a noisy source quickly.
+    for package_id in proxy_allowlist:
+        if package_id in denylist or package_id in apps:
+            continue
+        apps[package_id] = _empty_app(package_id, now)
 
     for row in evidence_rows:
         package_id = row.get("package_id")
         if not package_id or package_id in denylist:
             continue
 
-        item = apps.setdefault(
-            package_id,
-            {
-                "package_id": package_id,
-                "names": [],
-                "first_seen": row.get("discovered_at") or now,
-                "last_seen": row.get("discovered_at") or now,
-                "source_domains": [],
-                "stores": [],
-                "evidence_count": 0,
-                "direct_evidence_count": 0,
-                "proxy_evidence_count": 0,
-                "direct_confidence": 0.0,
-                "proxy_confidence": 0.0,
-                "positive_evidence_count": 0,
-                "negative_evidence_count": 0,
-                "positive_confidence": 0.0,
-                "negative_confidence": 0.0,
-                "route": "uncertain",
-                "status": "candidate",
-                "reason": "insufficient_evidence",
-                "_direct_rows": [],
-                "_proxy_rows": [],
-            },
-        )
+        item = apps.setdefault(package_id, _empty_app(package_id, row.get("discovered_at") or now))
 
         if row.get("app_name"):
             item["names"] = sorted(set(item["names"]) | {row["app_name"]})
@@ -291,12 +290,18 @@ def build_apps(
 
         item["direct_confidence"] = direct
         item["proxy_confidence"] = proxy
-        # Backward-compatible aliases for tooling that still reads the old names.
         item["positive_evidence_count"] = item["direct_evidence_count"]
         item["negative_evidence_count"] = item["proxy_evidence_count"]
         item["positive_confidence"] = direct
         item["negative_confidence"] = proxy
 
+        # Manual route files are explicit overrides. denylist remains the highest
+        # priority because such packages never reach this point.
+        if package_id in proxy_allowlist:
+            item["route"] = "proxy"
+            item["status"] = "confirmed"
+            item["reason"] = "proxy_allowlist"
+            continue
         if package_id in allowlist:
             item["route"] = "direct"
             item["status"] = "confirmed"
