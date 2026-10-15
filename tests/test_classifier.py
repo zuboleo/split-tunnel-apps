@@ -31,6 +31,13 @@ def test_inflected_without_vpn_failure_routes_proxy() -> None:
     assert c.effect == "NOT_WORKING"
 
 
+def test_rustore_without_vpn_cannot_enter_routes_proxy() -> None:
+    c = analyze_text("Без впн не зайдёшь, пишет ошибка подключения")
+    assert c.route == "proxy"
+    assert c.condition == "WITHOUT_VPN"
+    assert c.confidence >= 0.9
+
+
 def test_goal_to_work_without_vpn_means_proxy_is_currently_needed() -> None:
     c = analyze_text("Сделайте приложение чтобы работало без VPN, а то без него не работает")
     assert c.route == "proxy"
@@ -39,6 +46,12 @@ def test_goal_to_work_without_vpn_means_proxy_is_currently_needed() -> None:
 
 def test_same_failure_with_and_without_vpn_is_neutral() -> None:
     c = analyze_text('Не работает от слова "вообще", с впн или без не имеет значения.')
+    assert c.route == "neutral"
+    assert not c.relevant
+
+
+def test_vpn_also_fails_does_not_imply_direct() -> None:
+    c = analyze_text("Без вайфая не открывается вообще, да и с впн тоже через раз")
     assert c.route == "neutral"
     assert not c.relevant
 
