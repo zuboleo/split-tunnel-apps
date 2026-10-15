@@ -1,0 +1,70 @@
+name: Update app list
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scraper/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/update.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scraper/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/update.yml'
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-app-list-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run checks
+        run: pytest -q
+
+      - name: Update application lists
+        if: github.event_name != 'pull_request'
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ vars.DEEPSEEK_MODEL || 'deepseek-chat' }}
+        run: python -m scraper.main
+
+      - name: Commit updates
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/direct_apps.txt public/proxy_apps.txt
+          if git diff --staged --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: update app lists $(date -u +%F)"
+          git push

@@ -1,0 +1,1 @@
+com.accurate.channel.forecast.live.weather,com.fls.gosuslugispb,com.google.android.youtube,com.indie.bustime,com.rockstonedev.bottle,com.tipsytavern.app,de.wetteronline.wetterapp,kallossoft.avatar,rtb.mobile.android,ru.beru.android,ru.bus62.SmartTransport,ru.filit.mvideo.b2c,ru.mos.um,ru.nskes.paysphera,ru.vdgb_soft.zhkh,www.metro.com
