@@ -5,7 +5,13 @@ from scraper.deepseek_classifier import DeepSeekClassifier
 
 def test_parse_route() -> None:
     assert DeepSeekClassifier.parse_route("DIRECT") == "DIRECT"
-    assert DeepSeekClassifier.parse_route("proxy") == "PROXY"
+    assert DeepSeekClassifier.parse_route("proxy\n") == "PROXY"
+    assert DeepSeekClassifier.parse_route("`SKIP`") == "SKIP"
+
+
+def test_parse_route_rejects_explanations() -> None:
+    with pytest.raises(ValueError):
+        DeepSeekClassifier.parse_route("I think PROXY because VPN helps")
 
 
 def test_parse_route_rejects_unknown_answer() -> None:
