@@ -2,188 +2,249 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
+
+from pymorphy3 import MorphAnalyzer
+from razdel import sentenize, tokenize
 
 from .models import Classification
 
 
-_VPN = r"(?:vpn|впн)"
-_VPN_TOKEN = re.compile(rf"\b{_VPN}\b", re.I)
-_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|[\r\n]+")
+# Deliberately support only normal spellings/aliases. Mixed Cyrillic/Latin
+# lookalikes are not normalized: they add complexity and false positives.
+_VPN_ALIASES = {"vpn", "впн", "квн"}
+_VPN_RE = re.compile(r"(?<![\w])(?:vpn|впн|квн)(?![\w])", re.I)
+_MORPH = MorphAnalyzer()
+
+_CLAUSE_BREAK_WORDS = {"а", "но", "зато", "однако"}
+_HARD_PUNCT = {".", "!", "?", ";"}
+
+_WORK_LEMMAS = {
+    "работать",
+    "открываться",
+    "открывать",
+    "запускаться",
+    "запускать",
+    "заходить",
+    "входить",
+    "грузиться",
+    "загружаться",
+    "пускать",
+}
+_DISABLE_LEMMAS = {"отключать", "отключить", "выключать", "выключить"}
+_ENABLE_LEMMAS = {"включать", "включить", "подключать", "подключить"}
+_REQUIRE_LEMMAS = {"требовать", "требоваться", "нужно", "необходимо", "надо", "приходиться"}
+_DETECT_LEMMAS = {
+    "обнаруживать",
+    "обнаружить",
+    "определять",
+    "определить",
+    "распознавать",
+    "распознать",
+    "детектить",
+    "видеть",
+    "ругаться",
+}
+_BLOCK_LEMMAS = {
+    "блокировать",
+    "заблокировать",
+    "ограничивать",
+    "ограничить",
+    "запрещать",
+    "запретить",
+}
+_HELP_LEMMAS = {"помогать", "помочь", "спасать", "спасти", "выручать", "выручить"}
+_ACCESS_LEMMAS = {
+    "вход",
+    "доступ",
+    "авторизация",
+    "регистрация",
+    "приложение",
+    "сервис",
+    "сайт",
+    "блокировка",
+    "ограничение",
+    "обход",
+}
+_GOAL_WORDS = {"чтобы", "хотеть", "сделать", "просить"}
+_OFF_WORDS = {"выключенный", "отключенный", "неактивный"}
 
 
 @dataclass(frozen=True, slots=True)
-class _Rule:
-    name: str
+class _Token:
+    text: str
+    lower: str
+    lemma: str
+
+
+@dataclass(frozen=True, slots=True)
+class _Relation:
+    route: str
     confidence: float
-    pattern: re.Pattern[str]
+    condition: str
+    effect: str
+    reason: str
 
 
-def _rx(pattern: str) -> re.Pattern[str]:
-    return re.compile(pattern, re.I)
+@lru_cache(maxsize=8192)
+def _lemma(word: str) -> str:
+    if not re.fullmatch(r"[а-яё]+", word, re.I):
+        return word.lower()
+    try:
+        return _MORPH.parse(word.lower())[0].normal_form
+    except Exception:
+        return word.lower()
 
 
-_POSITIVE_RULES = [
-    _Rule("false_vpn_detection_ru", 0.99, _rx(
-        rf"(?:(?:требует|просит|пишет|сообщает|показывает|ругается|находит|наш[её]л|видит)"
-        rf"[^.!?]{{0,90}}\b{_VPN}\b[^.!?]{{0,90}}(?:нет|не\s+установлен|не\s+включ[её]н|выключен|отключен)|"
-        rf"\b{_VPN}\b[^.!?]{{0,50}}(?:нет|не\s+установлен|не\s+включ[её]н|выключен|отключен)"
-        rf"[^.!?]{{0,90}}(?:требует|просит|пишет|сообщает|показывает|ругается))"
-    )),
-    _Rule("requires_disable_vpn_ru", 0.96, _rx(
-        rf"(?:(?:требует|просит|нужно|необходимо|надо|предлагает|пишет|сообщает|показывает)"
-        rf"[^.!?]{{0,80}}(?:отключить|выключить|отключите|выключите)[^.!?]{{0,35}}\b{_VPN}\b|"
-        rf"(?:для\s+(?:входа|доступа|работы|продолжения)|чтобы\s+(?:войти|зайти|продолжить|работало?))"
-        rf"[^.!?]{{0,80}}(?:требуется|нужно|необходимо|надо)[^.!?]{{0,35}}(?:отключить|выключить)"
-        rf"[^.!?]{{0,35}}\b{_VPN}\b|"
-        rf"(?:отключите|выключите)[^.!?]{{0,35}}\b{_VPN}\b[^.!?]{{0,80}}(?:чтобы|для|иначе|продолж))"
-    )),
-    _Rule("vpn_detected_ru", 0.96, _rx(
-        rf"(?:\b{_VPN}\b[^.!?]{{0,55}}(?:обнаружен|обнаружено|активен|включ[её]н|запрещ[её]н|не\s+разреш[её]н)|"
-        rf"(?:обнаружен|обнаружено|детектит|определяет|распозна[её]т|видит|находит|наш[её]л|ругается\s+на)"
-        rf"[^.!?]{{0,55}}\b{_VPN}\b)"
-    )),
-    _Rule("vpn_allergy_ru", 0.91, _rx(
-        rf"(?:(?:приложени[еяю]|сервис|прога|приложуха)[^.!?]{{0,60}}(?:аллерги|не\s+любит|не\s+дружит)"
-        rf"[^.!?]{{0,35}}\b{_VPN}\b|(?:аллерги|не\s+любит|не\s+дружит)[^.!?]{{0,35}}\b{_VPN}\b)"
-    )),
-    _Rule("blocked_with_vpn_ru", 0.92, _rx(
-        rf"(?:\b(?:с|при|через)\b[^.!?]{{0,20}}\b{_VPN}\b[^.!?]{{0,100}}"
-        rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|"
-        rf"(?:выда[её]т|пишет|показывает)\s+ошибк|доступ\s+(?:закрыт|ограничен)|блокируется)|"
-        rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает)|"
-        rf"доступ\s+(?:закрыт|ограничен)|блокируется)[^.!?]{{0,100}}"
-        rf"\b(?:с|при|через)\b[^.!?]{{0,20}}\b{_VPN}\b)"
-    )),
-    _Rule("vpn_blocks_access_ru", 0.93, _rx(
-        rf"\b{_VPN}\b[^.!?]{{0,75}}(?:не\s+да[её]т\s+(?:войти|зайти|открыть|работать)|"
-        rf"не\s+пускает|мешает\s+(?:входу|работе)|блокирует\s+(?:доступ|вход|работу)|"
-        rf"ограничивает\s+(?:доступ|вход|работу))"
-    )),
-    _Rule("disable_vpn_ru", 0.66, _rx(
-        rf"(?:отключите|выключите|отключить|выключить)[^.!?]{{0,45}}\b{_VPN}\b"
-    )),
-    _Rule("false_vpn_detection_en", 0.99, _rx(
-        r"(?:asks?|requires?|says?|reports?|shows?)[^.!?]{0,80}(?:disable|turn\s+off)[^.!?]{0,35}\bvpn\b"
-        r"[^.!?]{0,80}(?:not\s+installed|not\s+enabled|already\s+off|disabled)"
-    )),
-    _Rule("requires_disable_vpn_en", 0.96, _rx(
-        r"(?:(?:asks?|requires?|must|need\s+to|says?|reports?|shows?)[^.!?]{0,80}"
-        r"(?:disable|turn\s+off)[^.!?]{0,35}\bvpn\b|"
-        r"(?:disable|turn\s+off)[^.!?]{0,35}\bvpn\b[^.!?]{0,80}(?:to\s+continue|otherwise))"
-    )),
-    _Rule("vpn_detected_en", 0.96, _rx(
-        r"(?:\bvpn\b[^.!?]{0,50}(?:detected|active|enabled|not\s+allowed|blocked)|(?:detects?|detected)[^.!?]{0,50}\bvpn\b)"
-    )),
-    _Rule("blocked_with_vpn_en", 0.92, _rx(
-        r"(?:(?:\bwith\b|\bwhen\s+using\b)[^.!?]{0,25}\bvpn\b[^.!?]{0,90}"
-        r"(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)|"
-        r"(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)[^.!?]{0,90}"
-        r"(?:\bwith\b|\bwhen\s+using\b)[^.!?]{0,25}\bvpn\b)"
-    )),
-    _Rule("vpn_blocks_access_en", 0.93, _rx(
-        r"\bvpn\b[^.!?]{0,75}(?:blocks?\s+(?:access|login)|prevents?\s+(?:login|access)|breaks?\s+the\s+app)"
-    )),
-    _Rule("disable_vpn_en", 0.66, _rx(r"(?:disable|turn\s+off)[^.!?]{0,40}\bvpn\b")),
-]
+def _tokens(text: str) -> list[_Token]:
+    result: list[_Token] = []
+    for item in tokenize(text):
+        lower = item.text.lower()
+        result.append(_Token(item.text, lower, _lemma(lower)))
+    return result
 
 
-_NEGATIVE_RULES = [
-    _Rule("requires_vpn_ru", 0.97, _rx(
-        rf"(?:(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает))"
-        rf"[^.!?]{{0,80}}\bбез\b[^.!?]{{0,20}}\b{_VPN}\b|"
-        rf"\bбез\b[^.!?]{{0,20}}\b{_VPN}\b[^.!?]{{0,45}}"
-        rf"(?:не\s+(?:работает|открывается|запускается|заходит|входит|грузится|пускает|зайд[её]шь|войд[её]шь)|"
-        rf"(?:не\s+)?зайд[её]шь|(?:не\s+)?войд[её]шь)|"
-        rf"\b{_VPN}\b[^.!?]{{0,90}}\bбез\s+него\b[^.!?]{{0,45}}не\s+(?:работает|открывается|заходит|входит|грузится)|"
-        rf"(?:работает|открывается|заходит|входит)[^.!?]{{0,50}}\bтолько\b[^.!?]{{0,20}}"
-        rf"\b(?:с|через)\b[^.!?]{{0,15}}\b{_VPN}\b)"
-    )),
-    _Rule("same_with_without_vpn_ru", 0.96, _rx(
-        rf"(?:\bс\b\s*\b{_VPN}\b\s*(?:или|и|/)\s*\bбез\b(?:\s+(?:него|\b{_VPN}\b))?"
-        rf"[^.!?]{{0,55}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)|"
-        rf"(?:что|и)\s+\bс\b\s*\b{_VPN}\b[^.!?]{{0,55}}(?:что|и)\s+\bбез\b(?:\s+(?:него|\b{_VPN}\b))?|"
-        rf"\bбез\b\s*\b{_VPN}\b[^.!?]{{0,45}}\bс\b\s*\b{_VPN}\b)"
-    )),
-    _Rule("vpn_helps_ru", 0.97, _rx(
-        rf"(?:(?:не\s+(?:работает|открывается|заходит|входит|грузится)|блокир\w*|огранич\w*)"
-        rf"[^.!?]{{0,90}}\b{_VPN}\b[^.!?]{{0,25}}(?:поможет|помогает|спасает|выручает)|"
-        rf"\b{_VPN}\b[^.!?]{{0,25}}(?:поможет|помогает|спасает|выручает)"
-        rf"[^.!?]{{0,65}}(?:зайти|войти|открыть|загрузить|работать|получить\s+доступ|разблокировать|обойти\s+огранич)|"
-        rf"(?:нужен|нужна|необходим)[^.!?]{{0,25}}\b{_VPN}\b[^.!?]{{0,55}}(?:для|чтобы)"
-        rf"[^.!?]{{0,35}}(?:вход|доступ|работ|открыт|загруз))"
-    )),
-    _Rule("works_with_vpn_ru", 0.90, _rx(
-        rf"\b(?:с|через|при\s+включ[её]нном)\b[^.!?]{{0,25}}\b{_VPN}\b"
-        rf"[^.!?]{{0,55}}(?:работает|открывается|заходит|входит|вс[её]\s+норм)"
-    )),
-    _Rule("vpn_does_not_fix_ru", 0.90, _rx(
-        rf"(?:\bс\b\s*\b{_VPN}\b[^.!?]{{0,30}}(?:тоже|так\s+же)[^.!?]{{0,25}}"
-        rf"(?:не\s+работает|не\s+открывается|глючит|ошибк|через\s+раз)|"
-        rf"\b{_VPN}\b[^.!?]{{0,20}}(?:не\s+помогает|не\s+помог|не\s+спасает))"
-    )),
-    _Rule("without_vpn_is_goal_ru", 0.92, _rx(
-        rf"(?:(?:чтобы|хочу|хотел(?:ось)?|сделайте)[^.!?]{{0,80}}"
-        rf"(?:работал[оа]?|открывал(?:ось|ся)?|заходил[оа]?|грузил(?:ось|ся)?)"
-        rf"[^.!?]{{0,45}}\bбез\b[^.!?]{{0,15}}\b{_VPN}\b|"
-        rf"(?:чтобы|хочу|хотел(?:ось)?|сделайте)[^.!?]{{0,80}}\bбез\b[^.!?]{{0,15}}\b{_VPN}\b"
-        rf"[^.!?]{{0,45}}(?:работал|работало|открывал|заходил|грузил))"
-    )),
-    _Rule("requires_vpn_en", 0.97, _rx(
-        r"(?:(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)[^.!?]{0,80}\bwithout\s+vpn\b|"
-        r"\bwithout\s+vpn\b[^.!?]{0,55}(?:does(?:n't| not)|won't|will\s+not)\s+(?:work|open|login|load)|"
-        r"(?:works?|opens?|logs?\s+in|loads?)[^.!?]{0,45}\bonly\b[^.!?]{0,20}\bwith\s+vpn\b)"
-    )),
-    _Rule("same_with_without_vpn_en", 0.96, _rx(
-        r"(?:(?:with\s+vpn\s+(?:or|and)\s+without\s+(?:it|vpn)|without\s+vpn\s+(?:or|and)\s+with\s+vpn)"
-        r"[^.!?]{0,55}(?:same|no\s+difference|doesn't\s+matter|does\s+not\s+matter)|"
-        r"(?:same|fails?|broken)[^.!?]{0,60}(?:with\s+vpn[^.!?]{0,30}without\s+vpn|without\s+vpn[^.!?]{0,30}with\s+vpn))"
-    )),
-    _Rule("vpn_helps_en", 0.97, _rx(
-        r"(?:(?:doesn't\s+work|does\s+not\s+work|won't\s+open|blocked|restricted)[^.!?]{0,90}\bvpn\b[^.!?]{0,25}(?:helps?|fixes?)|"
-        r"\bvpn\b[^.!?]{0,25}(?:helps?|fixes?)[^.!?]{0,65}(?:work|open|login|load|access|unblock)|"
-        r"(?:needed|required)[^.!?]{0,25}\bvpn\b[^.!?]{0,55}(?:to|for)[^.!?]{0,30}(?:work|open|login|access))"
-    )),
-    _Rule("works_with_vpn_en", 0.90, _rx(
-        r"(?:\bwith\b|\bthrough\b)[^.!?]{0,20}\bvpn\b[^.!?]{0,60}(?:works?|opens?|logs?\s+in|loads?)"
-    )),
-    _Rule("vpn_does_not_fix_en", 0.90, _rx(
-        r"(?:with\s+vpn[^.!?]{0,30}(?:also|still)[^.!?]{0,30}(?:fails?|doesn't\s+work|broken)|"
-        r"vpn[^.!?]{0,25}(?:doesn't\s+help|does\s+not\s+help))"
-    )),
-]
-
-_WEAK_RULES = [
-    _Rule("vpn_problem_ru", 0.48, _rx(rf"\b{_VPN}\b[^.!?]{{0,80}}(?:ошибк|проблем|некоррект|мешает|конфликт)")),
-    _Rule("vpn_problem_en", 0.48, _rx(r"\bvpn\b[^.!?]{0,80}(?:problem|issue|conflict|error)")),
-]
-
-_AMBIGUOUS_POSITIVE = {"blocked_with_vpn_ru", "blocked_with_vpn_en", "vpn_blocks_access_ru", "vpn_blocks_access_en"}
-_CONTEXTUAL_NEGATIVE = {rule.name for rule in _NEGATIVE_RULES}
+def _is_anchor(token: _Token) -> bool:
+    return token.lower in _VPN_ALIASES
 
 
-def _normalize(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
+def _clause_bounds(tokens: list[_Token], anchor: int, radius: int = 14) -> tuple[int, int]:
+    left = max(0, anchor - radius)
+    right = min(len(tokens), anchor + radius + 1)
+
+    for i in range(anchor - 1, left - 1, -1):
+        if tokens[i].text in _HARD_PUNCT or tokens[i].lower in _CLAUSE_BREAK_WORDS:
+            left = i + 1
+            break
+    for i in range(anchor + 1, right):
+        if tokens[i].text in _HARD_PUNCT or tokens[i].lower in _CLAUSE_BREAK_WORDS:
+            right = i
+            break
+    return left, right
 
 
-def _units(text: str) -> list[str]:
-    raw_parts = [part.strip() for part in _SPLIT_RE.split(text) if part.strip()]
-    result: list[str] = []
-    for part in raw_parts:
-        if not _VPN_TOKEN.search(part):
+def _window(tokens: list[_Token], anchor: int) -> tuple[list[_Token], int]:
+    left, right = _clause_bounds(tokens, anchor)
+    return tokens[left:right], anchor - left
+
+
+def _near(values: set[str], tokens: list[_Token], anchor: int, distance: int) -> list[int]:
+    return [
+        i
+        for i, token in enumerate(tokens)
+        if token.lemma in values and abs(i - anchor) <= distance
+    ]
+
+
+def _is_negated(tokens: list[_Token], index: int) -> bool:
+    start = max(0, index - 3)
+    for token in tokens[start:index]:
+        if token.lower == "не":
+            return True
+        if token.text in {",", ";", ".", "!", "?"}:
+            return False
+    return False
+
+
+def _condition(tokens: list[_Token], anchor: int) -> str:
+    before = tokens[max(0, anchor - 4):anchor]
+    before_lemmas = [t.lemma for t in before]
+
+    # Verb operators are more specific than a nearby preposition.
+    for i in _near(_DISABLE_LEMMAS, tokens, anchor, 5):
+        if not _is_negated(tokens, i):
+            return "DISABLE_VPN"
+    for i in _near(_ENABLE_LEMMAS, tokens, anchor, 5):
+        if not _is_negated(tokens, i):
+            return "ENABLE_VPN"
+
+    if "без" in before_lemmas[-3:]:
+        return "WITHOUT_VPN"
+    if any(value in before_lemmas[-3:] for value in {"с", "через", "при"}):
+        return "WITH_VPN"
+    return "VPN"
+
+
+def _work_effect(tokens: list[_Token], anchor: int) -> tuple[str | None, int | None]:
+    candidates: list[tuple[int, int, str]] = []
+    for i, token in enumerate(tokens):
+        if token.lemma not in _WORK_LEMMAS:
             continue
-        if len(part) <= 360:
-            result.append(part)
+        distance = abs(i - anchor)
+        if distance > 8:
             continue
-        for match in _VPN_TOKEN.finditer(part):
-            result.append(part[max(0, match.start() - 170):min(len(part), match.end() + 190)])
-    return result or ([text] if _VPN_TOKEN.search(text) else [])
+        effect = "NOT_WORKING" if _is_negated(tokens, i) else "WORKING"
+        candidates.append((distance, i, effect))
+    if not candidates:
+        return None, None
+    _, index, effect = min(candidates)
+    return effect, index
 
 
-def _adjust(confidence: float, role: str, rule_name: str) -> float:
+def _contains(tokens: list[_Token], lemmas: set[str]) -> bool:
+    return any(token.lemma in lemmas for token in tokens)
+
+
+def _contains_goal(tokens: list[_Token]) -> bool:
+    return any(token.lower == "чтобы" or token.lemma in _GOAL_WORDS for token in tokens)
+
+
+def _contains_only(tokens: list[_Token]) -> bool:
+    return any(token.lower == "только" for token in tokens)
+
+
+def _same_with_without_vpn(text: str) -> bool:
+    alias = r"(?:vpn|впн|квн)"
+    patterns = (
+        rf"(?:что\s+)?с\s+{alias}[^.!?]{{0,45}}(?:что\s+)?без(?:\s+(?:него|{alias}))?[^.!?]{{0,40}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)",
+        rf"с\s+{alias}\s+(?:или|и|/)\s+без(?:\s+(?:него|{alias}))?[^.!?]{{0,40}}(?:не\s+имеет\s+значения|одинаков|вс[её]\s+равно|так\s+же)",
+        rf"(?:не\s+работает|не\s+открывается|глючит)[^.!?]{{0,45}}с\s+{alias}[^.!?]{{0,35}}(?:и|или|что)\s+без",
+    )
+    return any(re.search(pattern, text, re.I) for pattern in patterns)
+
+
+def _vpn_does_not_help(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?<![\w])(?:vpn|впн|квн)(?![\w])[^.!?]{0,25}не\s+(?:помогает|помог|спасает|спас)",
+            text,
+            re.I,
+        )
+    )
+
+
+def _false_detection(tokens: list[_Token], anchor: int) -> bool:
+    # "Требует отключить VPN, но он выключен" / "VPN у меня не включен".
+    has_disable = bool(_near(_DISABLE_LEMMAS, tokens, anchor, 6))
+    if not has_disable:
+        return False
+    lemmas = [token.lemma for token in tokens]
+    raw = " ".join(token.lower for token in tokens)
+    return (
+        any(value in lemmas for value in _OFF_WORDS)
+        or bool(re.search(r"(?:не\s+включ[её]н|не\s+использую|vpn\s+нет|впн\s+нет|квн\s+нет)", raw, re.I))
+    )
+
+
+def _problem_context(tokens: list[_Token], app_name: str | None) -> bool:
+    if _contains(tokens, _WORK_LEMMAS | _BLOCK_LEMMAS | _ACCESS_LEMMAS):
+        return True
+    if any(token.lemma in {"ошибка", "проблема", "недоступный"} for token in tokens):
+        return True
+    if app_name:
+        app_words = {part.lower() for part in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", app_name) if len(part) >= 3}
+        token_words = {token.lower for token in tokens}
+        return bool(app_words & token_words)
+    return False
+
+
+def _adjust(confidence: float, role: str, reason: str) -> float:
     if role == "developer_reply":
-        if rule_name in {"disable_vpn_ru", "disable_vpn_en"}:
+        # Generic support advice like "try disabling VPN" is evidence, but not
+        # proof that the application actively rejects VPN.
+        if reason == "disable_vpn":
             return min(confidence, 0.54)
-        return confidence * 0.94
+        return confidence * 0.97
     if role == "search_snippet":
         return confidence * 0.95
     if role == "article":
@@ -191,87 +252,250 @@ def _adjust(confidence: float, role: str, rule_name: str) -> float:
     return confidence
 
 
-def analyze_text(text: str, *, role: str = "generic", app_name: str | None = None) -> Classification:
-    normalized = _normalize(text)
-    if not normalized or not _VPN_TOKEN.search(normalized):
-        return Classification(False, 0, verdict="neutral", confidence=0.0)
+def _relation_for_anchor(
+    tokens: list[_Token],
+    anchor: int,
+    *,
+    role: str,
+    app_name: str | None,
+) -> list[_Relation]:
+    clause, local_anchor = _window(tokens, anchor)
+    if not clause:
+        return []
 
-    positive: list[tuple[str, float]] = []
-    negative: list[tuple[str, float]] = []
-    weak: list[tuple[str, float]] = []
+    raw = " ".join(token.text for token in clause)
+    condition = _condition(clause, local_anchor)
+    effect, effect_index = _work_effect(clause, local_anchor)
+    relations: list[_Relation] = []
 
-    for unit in _units(normalized):
-        unit_positive = [(r.name, _adjust(r.confidence, role, r.name)) for r in _POSITIVE_RULES if r.pattern.search(unit)]
-        unit_negative = [(r.name, _adjust(r.confidence, role, r.name)) for r in _NEGATIVE_RULES if r.pattern.search(unit)]
-        unit_weak = [(r.name, _adjust(r.confidence, role, r.name)) for r in _WEAK_RULES if r.pattern.search(unit)]
-        if {name for name, _ in unit_negative} & _CONTEXTUAL_NEGATIVE:
-            unit_positive = [item for item in unit_positive if item[0] not in _AMBIGUOUS_POSITIVE]
-        positive.extend(unit_positive)
-        negative.extend(unit_negative)
-        weak.extend(unit_weak)
+    def add(route: str, confidence: float, cond: str, eff: str, reason: str) -> None:
+        relations.append(_Relation(route, _adjust(confidence, role, reason), cond, eff, reason))
 
-    pos_conf = max((value for _, value in positive), default=0.0)
-    neg_conf = max((value for _, value in negative), default=0.0)
-    weak_conf = max((value for _, value in weak), default=0.0)
+    if _same_with_without_vpn(raw) or _vpn_does_not_help(raw):
+        add("neutral", 0.97, condition, "NO_VPN_EFFECT", "vpn_no_effect")
 
-    explicit_positive_names = {
-        "false_vpn_detection_ru", "requires_disable_vpn_ru", "vpn_detected_ru", "vpn_allergy_ru",
-        "blocked_with_vpn_ru", "vpn_blocks_access_ru", "false_vpn_detection_en",
-        "requires_disable_vpn_en", "vpn_detected_en", "blocked_with_vpn_en", "vpn_blocks_access_en",
-    }
-    if app_name and _VPN_TOKEN.search(app_name) and not any(name in explicit_positive_names for name, _ in positive):
-        pos_conf = 0.0
+    if _false_detection(clause, local_anchor):
+        add("direct", 0.99, "DISABLE_VPN", "FALSE_DETECTION", "false_vpn_detection")
 
-    if neg_conf >= 0.72 and neg_conf >= pos_conf + 0.08:
-        verdict, confidence = "negative", neg_conf
-    elif pos_conf >= 0.52 and pos_conf >= neg_conf + 0.04:
-        verdict, confidence = "positive", pos_conf
-    elif max(pos_conf, neg_conf, weak_conf) >= 0.45:
-        verdict, confidence = "uncertain", max(pos_conf, neg_conf, weak_conf)
+    disable_indexes = _near(_DISABLE_LEMMAS, clause, local_anchor, 5)
+    if disable_indexes and any(not _is_negated(clause, i) for i in disable_indexes):
+        explicit = _contains(clause, _REQUIRE_LEMMAS) or _contains(clause, _ACCESS_LEMMAS)
+        add(
+            "direct",
+            0.97 if explicit else 0.66,
+            "DISABLE_VPN",
+            "REQUIRED" if explicit else "ADVICE",
+            "requires_disable_vpn" if explicit else "disable_vpn",
+        )
+
+    if _near(_DETECT_LEMMAS, clause, local_anchor, 6):
+        add("direct", 0.96, "VPN", "DETECTED", "vpn_detected")
+
+    # Colloquial but quite specific: "у приложения аллергия на VPN", "не любит VPN".
+    lower_raw = raw.lower()
+    if re.search(r"(?:аллерги\w*|не\s+любит|не\s+дружит)[^.!?]{0,35}(?:vpn|впн|квн)", lower_raw, re.I):
+        add("direct", 0.91, "WITH_VPN", "NOT_WORKING", "vpn_allergy")
+
+    if effect == "NOT_WORKING":
+        if condition == "WITH_VPN":
+            add("direct", 0.94, condition, effect, "fails_with_vpn")
+        elif condition == "WITHOUT_VPN":
+            add("proxy", 0.97, condition, effect, "fails_without_vpn")
+    elif effect == "WORKING":
+        if condition == "WITH_VPN":
+            confidence = 0.97 if _contains_only(clause) else 0.66
+            add("proxy", confidence, condition, effect, "works_only_with_vpn" if confidence > 0.9 else "works_with_vpn")
+        elif condition == "WITHOUT_VPN" and _contains_goal(clause):
+            # "сделайте, чтобы работало без VPN" describes the desired state,
+            # so it is evidence that VPN is currently required.
+            add("proxy", 0.94, condition, "CURRENTLY_REQUIRES_VPN", "goal_work_without_vpn")
+
+    if condition == "ENABLE_VPN":
+        if effect in {"WORKING", None} or _contains(clause, _REQUIRE_LEMMAS | _ACCESS_LEMMAS):
+            add("proxy", 0.94, condition, effect or "REQUIRED", "enable_vpn")
+
+    if _near(_BLOCK_LEMMAS, clause, local_anchor, 7):
+        # A block verb tied to WITH_VPN/VPN means VPN causes the problem. Under
+        # WITHOUT_VPN it usually describes a restriction that VPN is bypassing.
+        if condition in {"WITH_VPN", "VPN"}:
+            add("direct", 0.94, condition, "BLOCKED", "vpn_blocks_access")
+        elif condition == "WITHOUT_VPN":
+            add("proxy", 0.93, condition, "BLOCKED", "blocked_without_vpn")
+
+    if _near(_HELP_LEMMAS, clause, local_anchor, 6) and _problem_context(clause, app_name):
+        # "VPN помогает защищать интернет" is deliberately excluded because it
+        # has no app/access/problem context.
+        add("proxy", 0.92, "VPN", "HELPS", "vpn_helps_access")
+
+    # "VPN нужен для входа/доступа".
+    if _contains(clause, _REQUIRE_LEMMAS) and _contains(clause, _ACCESS_LEMMAS):
+        disable_near = any(not _is_negated(clause, i) for i in disable_indexes)
+        if not disable_near:
+            add("proxy", 0.95, "VPN", "REQUIRED", "vpn_required")
+
+    # "VPN для обхода блокировок YouTube". This needs application/problem
+    # context so generic descriptions of VPN technology stay neutral.
+    if {"обход", "блокировка"}.issubset({token.lemma for token in clause}) and _problem_context(clause, app_name):
+        add("proxy", 0.91, "VPN", "BYPASS_RESTRICTION", "vpn_bypasses_restriction")
+
+    # If a normal work verb was found very far from the anchor, ignore it rather
+    # than inventing a relation across unrelated parts of a long sentence.
+    if effect_index is not None and abs(effect_index - local_anchor) > 8:
+        relations = [rel for rel in relations if rel.effect not in {"WORKING", "NOT_WORKING"}]
+
+    return relations
+
+
+def _english_relations(sentence: str, *, role: str) -> list[_Relation]:
+    text = sentence.lower()
+    if "vpn" not in text:
+        return []
+    result: list[_Relation] = []
+
+    def add(route: str, confidence: float, condition: str, effect: str, reason: str) -> None:
+        result.append(_Relation(route, _adjust(confidence, role, reason), condition, effect, reason))
+
+    if re.search(r"(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)[^.!?]{0,50}without\s+vpn", text) or re.search(
+        r"without\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)", text
+    ):
+        add("proxy", 0.97, "WITHOUT_VPN", "NOT_WORKING", "fails_without_vpn")
+    if re.search(r"with\s+vpn[^.!?]{0,50}(?:does(?:n't| not)|won't|will not)\s+(?:work|open|load|login)", text):
+        add("direct", 0.94, "WITH_VPN", "NOT_WORKING", "fails_with_vpn")
+    if re.search(r"(?:disable|turn\s+off)[^.!?]{0,30}vpn", text):
+        explicit = bool(re.search(r"(?:required|must|need|to\s+continue|to\s+login|for\s+access)", text))
+        add("direct", 0.97 if explicit else 0.66, "DISABLE_VPN", "REQUIRED" if explicit else "ADVICE", "requires_disable_vpn" if explicit else "disable_vpn")
+    if re.search(r"vpn[^.!?]{0,35}(?:detected|not\s+allowed|forbidden)", text):
+        add("direct", 0.96, "VPN", "DETECTED", "vpn_detected")
+    if re.search(r"(?:only\s+works?|works?\s+only)[^.!?]{0,35}with\s+vpn", text):
+        add("proxy", 0.97, "WITH_VPN", "WORKING", "works_only_with_vpn")
+    if re.search(r"vpn[^.!?]{0,30}(?:helps?|fixes?)[^.!?]{0,45}(?:work|open|load|login|access|block)", text):
+        add("proxy", 0.92, "VPN", "HELPS", "vpn_helps_access")
+    return result
+
+
+def _resolve(relations: list[_Relation]) -> Classification:
+    if not relations:
+        return Classification(False, 0, verdict="neutral", confidence=0.0, route="neutral")
+
+    best_direct = max((rel for rel in relations if rel.route == "direct"), key=lambda r: r.confidence, default=None)
+    best_proxy = max((rel for rel in relations if rel.route == "proxy"), key=lambda r: r.confidence, default=None)
+    best_neutral = max((rel for rel in relations if rel.route == "neutral"), key=lambda r: r.confidence, default=None)
+
+    direct_conf = best_direct.confidence if best_direct else 0.0
+    proxy_conf = best_proxy.confidence if best_proxy else 0.0
+    neutral_conf = best_neutral.confidence if best_neutral else 0.0
+
+    strongest_route = max(direct_conf, proxy_conf)
+    if neutral_conf >= 0.90 and neutral_conf >= strongest_route - 0.02:
+        route = "neutral"
+        confidence = neutral_conf
+        chosen = best_neutral
+    elif direct_conf >= 0.52 or proxy_conf >= 0.52:
+        if direct_conf and proxy_conf and abs(direct_conf - proxy_conf) < 0.10:
+            route = "uncertain"
+            confidence = max(direct_conf, proxy_conf)
+            chosen = best_direct if direct_conf >= proxy_conf else best_proxy
+        elif direct_conf > proxy_conf:
+            route = "direct"
+            confidence = direct_conf
+            chosen = best_direct
+        else:
+            route = "proxy"
+            confidence = proxy_conf
+            chosen = best_proxy
+    elif neutral_conf:
+        route = "neutral"
+        confidence = neutral_conf
+        chosen = best_neutral
     else:
-        verdict, confidence = "neutral", 0.0
+        route = "uncertain"
+        confidence = max(direct_conf, proxy_conf)
+        chosen = best_direct or best_proxy
+
+    verdict = {
+        "direct": "positive",
+        "proxy": "negative",
+        "neutral": "neutral",
+        "uncertain": "uncertain",
+    }[route]
+
+    direct_reasons = sorted({rel.reason for rel in relations if rel.route == "direct" and rel.confidence >= 0.80})
+    proxy_reasons = sorted({rel.reason for rel in relations if rel.route == "proxy" and rel.confidence >= 0.80})
+    weak_reasons = sorted({rel.reason for rel in relations if rel.confidence < 0.80})
 
     return Classification(
-        relevant=verdict == "positive",
+        relevant=route in {"direct", "proxy"},
         score=int(round(confidence * 10)),
-        strong_matches=sorted({name for name, value in positive if value >= 0.80}),
-        weak_matches=sorted({name for name, value in positive + weak if value < 0.80}),
+        strong_matches=direct_reasons,
+        weak_matches=weak_reasons,
         verdict=verdict,
         confidence=round(confidence, 3),
-        negative_matches=sorted({name for name, _ in negative}),
+        negative_matches=proxy_reasons,
+        route=route,
+        condition=chosen.condition if chosen else None,
+        effect=chosen.effect if chosen else None,
     )
+
+
+def analyze_text(
+    text: str,
+    *,
+    role: str = "generic",
+    app_name: str | None = None,
+) -> Classification:
+    normalized = re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
+    if not normalized or not _VPN_RE.search(normalized):
+        return Classification(False, 0, verdict="neutral", confidence=0.0, route="neutral")
+
+    relations: list[_Relation] = []
+    sentences = list(sentenize(normalized))
+    if not sentences:
+        sentences = [type("Sentence", (), {"text": normalized})()]
+
+    for sentence in sentences:
+        sentence_text = sentence.text
+        sentence_tokens = _tokens(sentence_text)
+        for index, token in enumerate(sentence_tokens):
+            if _is_anchor(token):
+                relations.extend(
+                    _relation_for_anchor(
+                        sentence_tokens,
+                        index,
+                        role=role,
+                        app_name=app_name,
+                    )
+                )
+        relations.extend(_english_relations(sentence_text, role=role))
+
+    return _resolve(relations)
 
 
 def combine_classifications(*items: Classification) -> Classification:
-    positive = [item for item in items if item.verdict == "positive"]
-    negative = [item for item in items if item.verdict == "negative"]
-    uncertain = [item for item in items if item.verdict == "uncertain"]
-    pos_conf = max((item.confidence for item in positive), default=0.0)
-    neg_conf = max((item.confidence for item in negative), default=0.0)
-
-    if neg_conf >= 0.72 and neg_conf >= pos_conf + 0.08:
-        verdict, confidence = "negative", neg_conf
-    elif pos_conf >= 0.52 and pos_conf >= neg_conf + 0.04:
-        verdict, confidence = "positive", pos_conf
-    elif uncertain:
-        verdict, confidence = "uncertain", max(item.confidence for item in uncertain)
-    elif positive or negative:
-        verdict, confidence = "uncertain", max(pos_conf, neg_conf)
-    else:
-        verdict, confidence = "neutral", 0.0
-
-    return Classification(
-        relevant=verdict == "positive",
-        score=int(round(confidence * 10)),
-        strong_matches=sorted({name for item in items for name in item.strong_matches}),
-        weak_matches=sorted({name for item in items for name in item.weak_matches}),
-        verdict=verdict,
-        confidence=round(confidence, 3),
-        negative_matches=sorted({name for item in items for name in item.negative_matches}),
-    )
+    relations: list[_Relation] = []
+    for item in items:
+        if item.route not in {"direct", "proxy", "neutral"} or item.confidence <= 0:
+            continue
+        reason = (
+            (item.strong_matches or item.negative_matches or item.weak_matches or [item.route])[0]
+        )
+        relations.append(
+            _Relation(
+                route=item.route,
+                confidence=item.confidence,
+                condition=item.condition or "VPN",
+                effect=item.effect or "UNKNOWN",
+                reason=reason,
+            )
+        )
+    return _resolve(relations)
 
 
-def analyze_review(review_text: str, developer_reply: str = "", *, app_name: str | None = None) -> Classification:
+def analyze_review(
+    review_text: str,
+    developer_reply: str = "",
+    *,
+    app_name: str | None = None,
+) -> Classification:
     review = analyze_text(review_text, role="user_review", app_name=app_name)
     if not developer_reply:
         return review
