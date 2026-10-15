@@ -58,6 +58,30 @@ def test_single_clear_proxy_observation_can_confirm() -> None:
     assert app["proxy_confidence"] >= 0.9
 
 
+def test_proxy_allowlist_can_force_known_app_without_evidence() -> None:
+    ds = build_apps([], {}, set(), set(), proxy_allowlist={"com.google.android.youtube"})
+    app = ds["apps"][0]
+    assert app["package_id"] == "com.google.android.youtube"
+    assert app["status"] == "confirmed"
+    assert app["route"] == "proxy"
+    assert app["reason"] == "proxy_allowlist"
+
+
+def test_proxy_allowlist_overrides_conflicting_scraped_route() -> None:
+    evidence = [row(confidence=0.96, route="direct")]
+    evidence[0]["package_id"] = "com.google.android.youtube"
+    ds = build_apps(
+        evidence,
+        {},
+        set(),
+        set(),
+        proxy_allowlist={"com.google.android.youtube"},
+    )
+    app = ds["apps"][0]
+    assert app["route"] == "proxy"
+    assert app["status"] == "confirmed"
+
+
 def test_two_moderate_reviews_from_same_store_can_confirm() -> None:
     rows = [
         row(confidence=0.66, fingerprint="one", snippet="review one"),
