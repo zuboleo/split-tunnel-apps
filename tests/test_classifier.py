@@ -74,6 +74,27 @@ def test_with_vpn_failure_routes_direct() -> None:
     assert c.effect == "NOT_WORKING"
 
 
+def test_enabled_vpn_state_failure_routes_direct() -> None:
+    c = analyze_text("При включенном ВПН приложение не работает")
+    assert c.route == "direct"
+    assert c.condition == "WITH_VPN"
+    assert c.effect == "NOT_WORKING"
+
+
+def test_enabling_vpn_then_working_routes_proxy() -> None:
+    c = analyze_text("Включил VPN — приложение заработало")
+    assert c.route == "proxy"
+    assert c.condition == "ENABLE_VPN"
+    assert c.effect == "WORKING"
+
+
+def test_disabling_vpn_then_working_routes_direct() -> None:
+    c = analyze_text("Выключил VPN — приложение заработало")
+    assert c.route == "direct"
+    assert c.condition == "DISABLE_VPN"
+    assert c.effect == "WORKING"
+
+
 def test_false_vpn_detection_is_very_strong_direct() -> None:
     c = analyze_text("Приложение требует отключить VPN, но он у меня не включен")
     assert c.route == "direct"
