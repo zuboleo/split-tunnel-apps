@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-VPN_RE = re.compile(r"(?<![\w])(?:vpn|впн|квн)(?![\w])", re.IGNORECASE)
+VPN_RE = re.compile(r"(?<![\w])(?:vpn|впн)(?![\w])", re.IGNORECASE)
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 _WORD_RE = re.compile(r"\S+")
 
@@ -33,7 +33,7 @@ def extract_vpn_contexts(
     max_sentence_words: int = 40,
     fallback_radius: int = 10,
 ) -> list[str]:
-    """Return only short local contexts that contain VPN/ВПН/КВН.
+    """Return only short local contexts that contain VPN/ВПН.
 
     Prefer a complete sentence. If punctuation is missing or the sentence is too
     long, keep only up to `fallback_radius` words on each side of the VPN token.
