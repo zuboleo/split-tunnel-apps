@@ -220,20 +220,15 @@ def route_from_labels(labels: dict[str, str]) -> str:
     values = list(labels.values())
     direct_strong = values.count("DIRECT_STRONG")
     proxy_strong = values.count("PROXY_STRONG")
-    direct = direct_strong + values.count("DIRECT")
-    proxy = proxy_strong + values.count("PROXY")
 
-    # Any meaningful evidence in both directions is a conflict. Do not try to
-    # average it into a route.
-    if direct and proxy:
+    # Public lists are global routing recommendations. Anecdotal DIRECT/PROXY
+    # reports are useful for discovery, but they are not enough to impose a
+    # route on every user. Only app/service-level STRONG evidence is publishable.
+    if direct_strong and proxy_strong:
         return "SKIP"
     if direct_strong:
         return "DIRECT"
     if proxy_strong:
-        return "PROXY"
-    if direct >= 2:
-        return "DIRECT"
-    if proxy >= 2:
         return "PROXY"
     return "SKIP"
 
