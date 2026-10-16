@@ -6,9 +6,13 @@ def test_extracts_only_sentence_with_vpn() -> None:
     assert extract_vpn_contexts(text) == ["Без VPN приложение не открывается."]
 
 
-def test_supports_russian_aliases() -> None:
+def test_supports_russian_alias() -> None:
     assert contains_vpn("С ВПН не работает")
-    assert contains_vpn("Без КВН не открывается")
+
+
+def test_does_not_treat_kvn_as_vpn() -> None:
+    assert not contains_vpn("Смотрю КВН каждый вечер")
+    assert not contains_vpn("Без КВН не открывается")
 
 
 def test_does_not_support_mixed_script_garbage() -> None:
