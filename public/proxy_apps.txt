@@ -1,1 +1,1 @@
-com.changdu.mobovideo,com.google.android.videos,com.google.android.youtube,com.imo.android.imoim,com.soundcloud.android,com.tumblr,com.turkcell.bip,com.welltory.client.android
+com.google.android.youtube,com.imo.android.imoim,com.snapchat.android,com.soundcloud.android,com.tumblr,com.welltory.client.android
