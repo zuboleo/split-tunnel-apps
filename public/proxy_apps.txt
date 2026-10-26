@@ -1,1 +1,1 @@
-com.google.android.youtube,com.nexstreaming.app.kinemasterfree,com.soundcloud.android,com.spotify.music,com.tumblr
+com.google.android.youtube,com.imo.android.imoim,com.nexstreaming.app.kinemasterfree,com.soundcloud.android,com.tumblr
