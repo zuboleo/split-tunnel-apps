@@ -1,1 +1,1 @@
-com.google.android.youtube,com.nexstreaming.app.kinemasterfree,com.tumblr,com.twitter.android,network.loki.messenger
+com.google.android.youtube,com.nexstreaming.app.kinemasterfree,com.tumblr,com.twitter.android,network.loki.messenger,ru.beru.android
